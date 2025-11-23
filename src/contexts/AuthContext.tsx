@@ -2,6 +2,13 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabase, Profile } from '../lib/supabase';
 import { logError, logInfo, traceAsyncOperation } from '../observability';
+import { createAuditLog } from '../lib/security';
+
+export interface MfaChallengeState {
+  factorId: string;
+  challengeId: string;
+  email: string;
+}
 
 interface AuthContextType {
   user: User | null;
@@ -9,7 +16,8 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   signUp: (email: string, password: string, fullName?: string) => Promise<{ error: AuthError | null }>;
-  signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>;
+  signIn: (email: string, password: string) => Promise<{ error: AuthError | null; mfaChallenge?: MfaChallengeState }>;
+  verifyMfaChallenge: (challenge: MfaChallengeState, code: string) => Promise<{ error: AuthError | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -93,30 +101,97 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         plan_type: 'free',
         credits: 0,
       });
+      await createAuditLog('user_registered', data.user.id, 'user', data.user.id, { email });
       logInfo('Perfil inicial creado tras registro', { email });
     }
 
     return { error };
   }, { op: 'auth', tags: { feature: 'signup' }, data: { email } });
 
+  const startMfaChallenge = async (email: string): Promise<{ challenge?: MfaChallengeState; error?: AuthError | null }> => {
+    const factorResponse = await supabase.auth.mfa.listFactors();
+    if (factorResponse.error) {
+      return { error: factorResponse.error };
+    }
+
+    const totpFactor = factorResponse.data?.totp?.find(factor => factor.status === 'verified');
+    if (!totpFactor) {
+      return { error: new AuthError('No hay un factor TOTP activo', 400) };
+    }
+
+    const challengeResponse = await supabase.auth.mfa.challenge({ factorId: totpFactor.id });
+    if (challengeResponse.error) {
+      return { error: challengeResponse.error };
+    }
+
+    return {
+      challenge: {
+        factorId: totpFactor.id,
+        challengeId: challengeResponse.data.id,
+        email,
+      },
+      error: null,
+    };
+  };
+
   const signIn = async (email: string, password: string) => traceAsyncOperation('auth.signIn', async () => {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
+    if (error?.message?.toLowerCase().includes('mfa')) {
+      logInfo('Inicio de sesión requiere 2FA', { email });
+      const { challenge, error: mfaError } = await startMfaChallenge(email);
+      return { error: mfaError ?? null, mfaChallenge: challenge };
+    }
+
     if (error) {
       logError('Fallo al iniciar sesión', { email, error });
-    } else {
+      return { error };
+    }
+
+    if (data?.session?.user) {
+      await createAuditLog('login_success', data.session.user.id, 'auth', data.session.user.id, { method: 'password' });
       logInfo('Inicio de sesión correcto', { email });
     }
 
-    return { error };
+    return { error: null };
   }, { op: 'auth', tags: { feature: 'signin' }, data: { email } });
+
+  const verifyMfaChallenge = async (challenge: MfaChallengeState, code: string) => traceAsyncOperation('auth.verifyMfa', async () => {
+    const verification = await supabase.auth.mfa.verify({
+      factorId: challenge.factorId,
+      challengeId: challenge.challengeId,
+      code,
+    });
+
+    if (verification.error) {
+      logError('Fallo al verificar 2FA', { email: challenge.email, error: verification.error });
+      return { error: verification.error };
+    }
+
+    const verifiedSession = verification.data.session;
+    setSession(verifiedSession);
+    setUser(verifiedSession?.user ?? null);
+
+    if (verifiedSession?.user) {
+      await fetchProfile(verifiedSession.user.id);
+      await createAuditLog('login_mfa_success', verifiedSession.user.id, 'auth', verifiedSession.user.id, {
+        method: 'totp',
+      });
+    }
+
+    logInfo('2FA verificada correctamente', { email: challenge.email });
+    return { error: null };
+  }, { op: 'auth', tags: { feature: 'mfa' }, data: { email: challenge.email } });
 
   const signOut = async () => traceAsyncOperation('auth.signOut', async () => {
     await supabase.auth.signOut();
     setProfile(null);
+    if (user?.id) {
+      await createAuditLog('logout', user.id, 'auth', user.id);
+    }
     logInfo('Sesión cerrada correctamente');
   }, { op: 'auth', tags: { feature: 'signout' } });
 
@@ -128,6 +203,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       signUp,
       signIn,
+      verifyMfaChallenge,
       signOut,
       refreshProfile,
     }}>

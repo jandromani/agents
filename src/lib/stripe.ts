@@ -173,7 +173,8 @@ export async function createCheckoutSession(
 }
 
 export async function createCreditPurchaseIntent(
-  packageId: string
+  packageId: string,
+  captchaToken?: string
 ): Promise<{ clientSecret?: string; error?: string }> {
   try {
     const { data: { session } } = await supabase.auth.getSession();
@@ -203,6 +204,7 @@ export async function createCreditPurchaseIntent(
             credits: pkg.credits,
             bonus: pkg.bonus || 0,
           },
+          captchaToken,
         }),
       }
     );

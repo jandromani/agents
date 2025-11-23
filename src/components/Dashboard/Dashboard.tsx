@@ -7,6 +7,7 @@ import { CreateAgentWizard } from './CreateAgentWizard';
 import { StatsCard } from './StatsCard';
 import { NotificationBell } from '../Notifications/NotificationBell';
 import { CreditPurchase } from '../Billing/CreditPurchase';
+import { logError, logInfo, traceAsyncOperation } from '../../observability';
 
 export function Dashboard() {
   const { profile, signOut } = useAuth();
@@ -27,7 +28,7 @@ export function Dashboard() {
     }
   }, [profile]);
 
-  const loadAgents = async () => {
+  const loadAgents = async () => traceAsyncOperation('dashboard.loadAgents', async () => {
     if (!profile) return;
 
     const { data, error } = await supabase
@@ -36,19 +37,29 @@ export function Dashboard() {
       .eq('user_id', profile.id)
       .order('created_at', { ascending: false });
 
+    if (error) {
+      logError('No se pudieron obtener los agentes', { error, userId: profile.id });
+    }
+
     if (data) {
       setAgents(data);
+      logInfo('Agentes cargados', { total: data.length });
     }
     setLoading(false);
-  };
+  }, { op: 'db', tags: { feature: 'dashboard', operation: 'agents' }, data: { userId: profile?.id } });
 
-  const loadStats = async () => {
+  const loadStats = async () => traceAsyncOperation('dashboard.loadStats', async () => {
     if (!profile) return;
 
-    const { data: usageData } = await supabase
+    const { data: usageData, error } = await supabase
       .from('usage_logs')
       .select('tokens_used, created_at')
       .eq('user_id', profile.id);
+
+    if (error) {
+      logError('No se pudieron recuperar las estadísticas de uso', { error, userId: profile.id });
+      return;
+    }
 
     if (usageData) {
       const totalQueries = usageData.length;
@@ -64,8 +75,9 @@ export function Dashboard() {
         activeAgents: agents.filter(a => a.status === 'active').length,
         queriesThisMonth: thisMonth,
       });
+      logInfo('Estadísticas de panel actualizadas', { totalQueries, thisMonth });
     }
-  };
+  }, { op: 'db', tags: { feature: 'dashboard', operation: 'stats' }, data: { userId: profile?.id } });
 
   const handleAgentCreated = () => {
     setShowCreateWizard(false);
@@ -73,17 +85,21 @@ export function Dashboard() {
     loadStats();
   };
 
-  const handleDeleteAgent = async (agentId: string) => {
+  const handleDeleteAgent = async (agentId: string) => traceAsyncOperation('dashboard.deleteAgent', async () => {
     const { error } = await supabase
       .from('agents')
       .delete()
       .eq('id', agentId);
 
-    if (!error) {
-      loadAgents();
-      loadStats();
+    if (error) {
+      logError('No se pudo eliminar el agente', { error, agentId });
+      return;
     }
-  };
+
+    logInfo('Agente eliminado', { agentId });
+    loadAgents();
+    loadStats();
+  }, { op: 'db', tags: { feature: 'dashboard', operation: 'delete' }, data: { agentId } });
 
   const canCreateAgent = () => {
     if (!profile) return false;

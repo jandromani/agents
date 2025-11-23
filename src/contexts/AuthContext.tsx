@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabase, Profile } from '../lib/supabase';
+import { captureException, logError, logInfo, traceAsyncOperation } from '../observability';
 
 interface AuthContextType {
   user: User | null;
@@ -21,18 +22,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = async (userId: string) => traceAsyncOperation('profiles.fetch', async () => {
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', userId)
       .maybeSingle();
 
+    if (error) {
+      logError('No se pudo obtener el perfil del usuario', { userId, error });
+      return null;
+    }
+
     if (data) {
       setProfile(data);
+      logInfo('Perfil cargado correctamente', { userId, plan: data.plan_type });
     }
     return data;
-  };
+  }, { op: 'db', tags: { feature: 'auth' }, data: { userId } });
 
   const refreshProfile = async () => {
     if (user) {
@@ -68,13 +75,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async (email: string, password: string, fullName?: string) => {
+  const signUp = async (email: string, password: string, fullName?: string) => traceAsyncOperation('auth.signUp', async () => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
     });
 
-    if (data.user && !error) {
+    if (error) {
+      logError('Error durante el registro', { email, error });
+    }
+
+    if (data?.user && !error) {
       await supabase.from('profiles').insert({
         id: data.user.id,
         email,
@@ -82,24 +93,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         plan_type: 'free',
         credits: 0,
       });
+      logInfo('Perfil inicial creado tras registro', { email });
     }
 
     return { error };
-  };
+  }, { op: 'auth', tags: { feature: 'signup' }, data: { email } });
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string) => traceAsyncOperation('auth.signIn', async () => {
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-    return { error };
-  };
+    if (error) {
+      logError('Fallo al iniciar sesión', { email, error });
+    } else {
+      logInfo('Inicio de sesión correcto', { email });
+    }
 
-  const signOut = async () => {
+    return { error };
+  }, { op: 'auth', tags: { feature: 'signin' }, data: { email } });
+
+  const signOut = async () => traceAsyncOperation('auth.signOut', async () => {
     await supabase.auth.signOut();
     setProfile(null);
-  };
+    logInfo('Sesión cerrada correctamente');
+  }, { op: 'auth', tags: { feature: 'signout' } });
 
   return (
     <AuthContext.Provider value={{

@@ -60,6 +60,7 @@ npm run dev
 | [CLOUDFLARE_SETUP.md](./CLOUDFLARE_SETUP.md) | Configuración de Cloudflare Workers |
 | [DEVELOPMENT_STATUS.md](./DEVELOPMENT_STATUS.md) | Estado detallado del proyecto |
 | [IMPLEMENTATION_SUMMARY.md](./IMPLEMENTATION_SUMMARY.md) | Resumen técnico de implementación |
+| [LAUNCH_MARKETING_SUPPORT.md](./LAUNCH_MARKETING_SUPPORT.md) | Manuales, onboarding y soporte para beta/producción |
 
 ---
 

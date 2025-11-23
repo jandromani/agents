@@ -514,6 +514,27 @@ Para ayuda adicional, revisa:
 
 ---
 
+## FASE 6: STAGING ESPEJO DE PRODUCCIÓN
+
+Usa esta fase para validar todo antes del lanzamiento público. El objetivo es que staging use **los mismos secrets y configuraciones que producción** para detectar cualquier diferencia.
+
+1) **Frontend Vite**
+- Copia la plantilla de staging: `cp .env.staging.example .env.staging`
+- Mantén los mismos valores de producción para Sentry (`VITE_SENTRY_*`), Stripe (`VITE_STRIPE_PUBLISHABLE_KEY`), Turnstile y Supabase (`VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY`).
+- Ajusta solo `VITE_APP_URL` al dominio de staging.
+
+2) **Supabase Edge Functions**
+- Carga los secrets con un solo comando: `supabase secrets set --env-file supabase/.env.staging.example`
+- Verifica que `SUPABASE_SERVICE_ROLE_KEY`, Stripe (`STRIPE_*`), OpenAI, SendGrid y Turnstile coincidan con producción.
+- Despliega funciones contra el proyecto de staging: `supabase functions deploy --project-ref <staging-ref> <function-name>`.
+
+3) **Observabilidad y QA**
+- Usa `VITE_APP_ENV=staging` y `ENVIRONMENT=staging` para etiquetar trazas en Sentry.
+- Ejecuta `npm run lint`, `npm run typecheck` y `npm run test:unit` antes de abrir tráfico.
+- Consulta `STAGING_ENVIRONMENT.md` para el checklist completo y las incidencias resueltas.
+
+---
+
 ## CONCLUSIÓN
 
 Siguiendo esta guía, tendrás AgentHub funcionando en producción con:

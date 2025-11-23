@@ -26,6 +26,11 @@ npm install
 cp .env.example .env
 ```
 
+### Variables de entorno imprescindibles
+- **Frontend**: `VITE_APP_ENV`, `VITE_APP_NAME`, `VITE_APP_URL`, `VITE_RELEASE`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_STRIPE_PUBLISHABLE_KEY`, `VITE_TURNSTILE_SITE_KEY`, `VITE_SENDGRID_KEY`, `VITE_TWILIO_AUTH_TOKEN`, `VITE_SENTRY_DSN`, `VITE_SENTRY_CDN`, `VITE_SENTRY_MONITOR_SLUG`, `VITE_SENTRY_TRACES_SAMPLE_RATE`, `VITE_SENTRY_PROFILES_SAMPLE_RATE`, `VITE_SENTRY_ERROR_SAMPLE_RATE`, `VITE_SENTRY_REPLAYS_SAMPLE_RATE`, `VITE_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE`, `VITE_APDEX_THRESHOLD`.
+- **Edge Functions / Backend**: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_BASIC`, `STRIPE_PRICE_ULTRA`, `OPENAI_API_KEY`, `SENDGRID_API_KEY`, `FROM_EMAIL`, `TURNSTILE_SECRET_KEY`, `TOTP_ENCRYPTION_KEY`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `SENTRY_DSN`, `SENTRY_TRACES_SAMPLE_RATE`, `SENTRY_PROFILES_SAMPLE_RATE`, `SENTRY_ERROR_SAMPLE_RATE`, `SENTRY_DEBUG`, `ENVIRONMENT`, `RELEASE`, `PROM_PUSHGATEWAY_URL`, `HOSTNAME`.
+- Valida que todas estén definidas antes de desplegar con: `ENV_FILE=.env npm run lint:env`.
+
 ---
 
 ## 🔧 Paso 2: Configurar Supabase (5 min)
@@ -135,7 +140,7 @@ Abre: [http://localhost:5173](http://localhost:5173)
 ### ⚠️ Requieren Configuración Adicional
 
 - ⚠️ **Desplegar agentes**: Necesita Cloudflare (ver `CLOUDFLARE_SETUP.md`)
-- ⚠️ **Probar agentes**: Necesita OpenRouter API key
+- ⚠️ **Probar agentes**: Necesita API key de OpenRouter/OpenAI
 - ⚠️ **Comprar créditos**: Necesita webhook de Stripe
 - ⚠️ **Suscripciones**: Necesita productos creados en Stripe
 
@@ -143,14 +148,13 @@ Abre: [http://localhost:5173](http://localhost:5173)
 
 ## 🔧 Configuración Adicional (Opcional)
 
-### OpenRouter (Para probar agentes)
+### OpenRouter / OpenAI (Para probar agentes)
 
-1. Ve a [openrouter.ai](https://openrouter.ai)
-2. Crea cuenta y añade $5 de crédito
-3. Crea API key
-4. En Supabase → Edge Functions → Secrets:
-   - Name: `OPENROUTER_API_KEY`
-   - Value: `sk-or-...`
+1. Ve a [openrouter.ai](https://openrouter.ai) u [platform.openai.com](https://platform.openai.com)
+2. Crea API key (ej. `sk-or-...` o `sk-...`)
+3. En Supabase → Edge Functions → Secrets:
+   - Name: `OPENAI_API_KEY`
+   - Value: `tu-api-key`
 
 ### Webhook de Stripe (Para pagos)
 

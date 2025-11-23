@@ -1,42 +1,53 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, lazy, Suspense } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { Dashboard } from './components/Dashboard/Dashboard';
-import { AuthModal } from './components/Auth/AuthModal';
-import { LandingPage } from './components/Landing';
-import { AdminRouter } from './components/Admin/AdminRouter';
 import { useRouter } from './contexts/RouterContext';
 import { RoleType } from './lib/supabase';
 
+const Dashboard = lazy(() => import('./components/Dashboard/Dashboard').then(module => ({ default: module.Dashboard })));
+const AuthModal = lazy(() => import('./components/Auth/AuthModal').then(module => ({ default: module.AuthModal })));
+const LandingPage = lazy(() => import('./components/Landing').then(module => ({ default: module.LandingPage })));
+const AdminRouter = lazy(() => import('./components/Admin/AdminRouter').then(module => ({ default: module.AdminRouter })));
+
 const ADMIN_ROLES: RoleType[] = ['superadmin', 'soporte', 'finanzas', 'moderador'];
+
+function LoadingScreen({ message }: { message: string }) {
+  return (
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="text-center">
+        <div className="w-16 h-16 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+        <p className="text-slate-600">{message}</p>
+      </div>
+    </div>
+  );
+}
 
 function HomeExperience() {
   const { user, loading } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-slate-600">Cargando...</p>
-        </div>
-      </div>
-    );
+    return <LoadingScreen message="Cargando..." />;
   }
 
   if (user) {
-    return <Dashboard />;
+    return (
+      <Suspense fallback={<LoadingScreen message="Preparando tu panel..." />}>
+        <Dashboard />
+      </Suspense>
+    );
   }
 
   return (
-    <>
+    <Suspense fallback={<LoadingScreen message="Cargando experiencia..." />}>
       <LandingPage onGetStarted={() => setShowAuthModal(true)} />
-      <AuthModal
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-        defaultMode="signup"
-      />
-    </>
+      <Suspense fallback={<LoadingScreen message="Cargando autenticación..." />}>
+        <AuthModal
+          isOpen={showAuthModal}
+          onClose={() => setShowAuthModal(false)}
+          defaultMode="signup"
+        />
+      </Suspense>
+    </Suspense>
   );
 }
 
@@ -56,14 +67,7 @@ function AdminGate() {
   }, [profile?.role]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-slate-600">Verificando acceso...</p>
-        </div>
-      </div>
-    );
+    return <LoadingScreen message="Verificando acceso..." />;
   }
 
   if (!user) {
@@ -88,7 +92,11 @@ function AdminGate() {
     );
   }
 
-  return <AdminRouter />;
+  return (
+    <Suspense fallback={<LoadingScreen message="Cargando panel admin..." />}>
+      <AdminRouter />
+    </Suspense>
+  );
 }
 
 function AppContent() {

@@ -1,17 +1,18 @@
-import { useState, useEffect } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase, Agent, PLAN_LIMITS } from '../../lib/supabase';
 import { Plus, Bot, TrendingUp, CreditCard, Settings, LogOut, Activity, Zap, ShieldCheck } from 'lucide-react';
-import { AgentCard } from './AgentCard';
-import { CreateAgentWizard } from './CreateAgentWizard';
+import { useRouter } from '../../contexts/RouterContext';
+import { logError, logInfo, traceAsyncOperation } from '../../observability';
 import { StatsCard } from './StatsCard';
 import { NotificationBell } from '../Notifications/NotificationBell';
-import { NotificationPreferences } from '../Notifications/NotificationPreferences';
-import { NotificationAdminPanel } from '../Notifications/NotificationAdminPanel';
-import { CreditPurchase } from '../Billing/CreditPurchase';
-import { AdminDashboard } from '../Admin/AdminDashboard';
-import { AdminAccessModal } from '../Admin/AdminAccessModal';
-import { SecuritySettings } from '../Profile/SecuritySettings';
+
+const AgentCard = lazy(() => import('./AgentCard').then(module => ({ default: module.AgentCard })));
+const CreateAgentWizard = lazy(() => import('./CreateAgentWizard').then(module => ({ default: module.CreateAgentWizard })));
+const NotificationPreferences = lazy(() => import('../Notifications/NotificationPreferences').then(module => ({ default: module.NotificationPreferences })));
+const NotificationAdminPanel = lazy(() => import('../Notifications/NotificationAdminPanel').then(module => ({ default: module.NotificationAdminPanel })));
+const CreditPurchase = lazy(() => import('../Billing/CreditPurchase').then(module => ({ default: module.CreditPurchase })));
+const SecuritySettings = lazy(() => import('../Profile/SecuritySettings').then(module => ({ default: module.SecuritySettings })));
 
 export function Dashboard() {
   const { profile, signOut } = useAuth();
@@ -27,61 +28,106 @@ export function Dashboard() {
   });
 
   useEffect(() => {
-    if (profile) {
-      loadAgents();
-      loadStats();
+    if (!profile) return;
+
+    const cachedAgents = sessionStorage.getItem(`agents:${profile.id}`);
+    if (cachedAgents) {
+      try {
+        const parsed = JSON.parse(cachedAgents) as Agent[];
+        setAgents(parsed);
+        setStats(prev => ({
+          ...prev,
+          activeAgents: parsed.filter(agent => agent.status === 'active').length,
+        }));
+        setLoading(false);
+      } catch (error) {
+        logError('No se pudieron leer los agentes cacheados', { error });
+      }
+    } else {
+      setLoading(true);
     }
+
+    const cachedStats = sessionStorage.getItem(`stats:${profile.id}`);
+    if (cachedStats) {
+      try {
+        const parsed = JSON.parse(cachedStats) as Partial<typeof stats>;
+        setStats(prev => ({ ...prev, ...parsed }));
+      } catch (error) {
+        logError('No se pudieron leer las estadísticas cacheadas', { error });
+      }
+    }
+
+    loadAgents();
+    loadStats();
   }, [profile]);
 
   const loadAgents = async () => traceAsyncOperation('dashboard.loadAgents', async () => {
     if (!profile) return;
 
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('agents')
-      .select('*')
+      .select('id, name, description, model, status, total_queries, last_used_at, worker_url, updated_at')
       .eq('user_id', profile.id)
       .order('created_at', { ascending: false });
 
     if (error) {
       logError('No se pudieron obtener los agentes', { error, userId: profile.id });
+      setLoading(false);
+      return;
     }
 
-    if (data) {
-      setAgents(data);
-      logInfo('Agentes cargados', { total: data.length });
-    }
+    const sanitizedAgents = data ?? [];
+    setAgents(sanitizedAgents as Agent[]);
+    setStats(prev => ({
+      ...prev,
+      activeAgents: sanitizedAgents.filter(agent => agent.status === 'active').length,
+    }));
+    sessionStorage.setItem(`agents:${profile.id}`, JSON.stringify(sanitizedAgents));
+    logInfo('Agentes cargados', { total: sanitizedAgents.length });
     setLoading(false);
   }, { op: 'db', tags: { feature: 'dashboard', operation: 'agents' }, data: { userId: profile?.id } });
 
   const loadStats = async () => traceAsyncOperation('dashboard.loadStats', async () => {
     if (!profile) return;
 
-    const { data: usageData, error } = await supabase
-      .from('usage_logs')
-      .select('tokens_used, created_at')
-      .eq('user_id', profile.id);
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
 
-    if (error) {
-      logError('No se pudieron recuperar las estadísticas de uso', { error, userId: profile.id });
+    const [totalResult, monthlyResult] = await Promise.all([
+      supabase
+        .from('usage_logs')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', profile.id),
+      supabase
+        .from('usage_logs')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', profile.id)
+        .gte('created_at', startOfMonth.toISOString()),
+    ]);
+
+    if (totalResult.error || monthlyResult.error) {
+      logError('No se pudieron recuperar las estadísticas de uso', {
+        totalError: totalResult.error,
+        monthlyError: monthlyResult.error,
+        userId: profile.id,
+      });
       return;
     }
 
-    if (usageData) {
-      const totalQueries = usageData.length;
-      const now = new Date();
-      const thisMonth = usageData.filter(log => {
-        const logDate = new Date(log.created_at);
-        return logDate.getMonth() === now.getMonth() &&
-               logDate.getFullYear() === now.getFullYear();
-      }).length;
+    const totalQueries = totalResult.count ?? 0;
+    const thisMonth = monthlyResult.count ?? 0;
 
-      setStats({
-        totalQueries,
-        activeAgents: agents.filter(a => a.status === 'active').length,
-        queriesThisMonth: thisMonth,
-      });
-      logInfo('Estadísticas de panel actualizadas', { totalQueries, thisMonth });
-    }
+    setStats(prev => ({
+      ...prev,
+      totalQueries,
+      queriesThisMonth: thisMonth,
+    }));
+    sessionStorage.setItem(`stats:${profile.id}`, JSON.stringify({
+      totalQueries,
+      queriesThisMonth: thisMonth,
+    }));
+    logInfo('Estadísticas de panel actualizadas', { totalQueries, thisMonth });
   }, { op: 'db', tags: { feature: 'dashboard', operation: 'stats' }, data: { userId: profile?.id } });
 
   const handleAgentCreated = () => {
@@ -260,46 +306,58 @@ export function Dashboard() {
             </div>
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {agents.map(agent => (
-                <AgentCard
-                  key={agent.id}
-                  agent={agent}
-                  onDelete={handleDeleteAgent}
-                  onUpdate={() => {
-                    loadAgents();
-                    loadStats();
-                  }}
-                />
-              ))}
+              <Suspense fallback={<div className="text-slate-500">Cargando agentes...</div>}>
+                {agents.map(agent => (
+                  <AgentCard
+                    key={agent.id}
+                    agent={agent}
+                    onDelete={handleDeleteAgent}
+                    onUpdate={() => {
+                      loadAgents();
+                      loadStats();
+                    }}
+                  />
+                ))}
+              </Suspense>
             </div>
           )}
         </div>
 
         <div className="grid lg:grid-cols-2 gap-6 mt-8">
-          <NotificationPreferences />
-          <NotificationAdminPanel />
+          <Suspense fallback={<div className="text-slate-500">Cargando notificaciones...</div>}>
+            <NotificationPreferences />
+          </Suspense>
+          <Suspense fallback={<div className="text-slate-500">Cargando panel admin de alertas...</div>}>
+            <NotificationAdminPanel />
+          </Suspense>
         </div>
 
         <div className="mt-8">
-          <SecuritySettings />
+          <Suspense fallback={<div className="text-slate-500">Cargando seguridad...</div>}>
+            <SecuritySettings />
+          </Suspense>
         </div>
       </div>
 
-      {showCreateWizard && (
-        <CreateAgentWizard
-          onClose={() => setShowCreateWizard(false)}
-          onSuccess={handleAgentCreated}
-        />
-      )}
+      <Suspense fallback={null}>
+        {showCreateWizard && (
+          <CreateAgentWizard
+            onClose={() => setShowCreateWizard(false)}
+            onSuccess={handleAgentCreated}
+          />
+        )}
+      </Suspense>
 
-      <CreditPurchase
-        isOpen={showCreditPurchase}
-        onClose={() => setShowCreditPurchase(false)}
-        onSuccess={() => {
-          loadStats();
-          window.location.reload();
-        }}
-      />
+      <Suspense fallback={null}>
+        <CreditPurchase
+          isOpen={showCreditPurchase}
+          onClose={() => setShowCreditPurchase(false)}
+          onSuccess={() => {
+            loadStats();
+            window.location.reload();
+          }}
+        />
+      </Suspense>
 
     </div>
   );

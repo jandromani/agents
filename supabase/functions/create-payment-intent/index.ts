@@ -43,10 +43,16 @@ Deno.serve(async (req: Request) => {
       throw new Error('Unauthorized');
     }
 
-    const { amount, currency, description, metadata } = await req.json();
+    const body = await req.json();
+    const { amount, currency, description, metadata } = body || {};
 
-    if (!amount || amount <= 0) {
+    if (typeof amount !== 'number' || Number.isNaN(amount) || amount <= 0) {
       throw new Error('Invalid amount');
+    }
+
+    const safeCurrency = typeof currency === 'string' ? currency.toLowerCase() : 'eur';
+    if (!['eur', 'usd', 'mxn'].includes(safeCurrency)) {
+      throw new Error('Unsupported currency');
     }
 
     const { data: profile } = await supabase
@@ -88,7 +94,7 @@ Deno.serve(async (req: Request) => {
 
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(amount * 100),
-      currency: currency || 'eur',
+      currency: safeCurrency,
       customer: stripeCustomerId,
       description: description || 'Recarga de créditos',
       metadata: {
@@ -104,7 +110,7 @@ Deno.serve(async (req: Request) => {
       user_id: user.id,
       stripe_payment_intent_id: paymentIntent.id,
       amount: amount,
-      currency: currency || 'eur',
+      currency: safeCurrency,
       status: paymentIntent.status,
       description: description,
       metadata: metadata,

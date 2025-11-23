@@ -479,6 +479,15 @@ La plataforma tiene una **base sólida y funcional** con:
 4. **Monitoreo** - Sin esto, estás ciego en producción
 5. **Testing** - Calidad y estabilidad
 
+### Elementos pendientes para madurez completa
+- Integración completa y pruebas exhaustivas del pipeline de parsing PDF/DOCX, incluyendo manejo de edge cases, optimización y generación eficiente de embeddings.
+- Interfaz de usuario para configurar notificaciones push, SMS y email con personalización por usuario y gestión desde el panel administrativo.
+- Finalización y despliegue de alertas dinámicas y dashboards en Sentry u otra plataforma APM con monitoreo continuo.
+- Extensión del panel administrativo con controles finos de roles, auditorías completas y gestión de soporte/tickets.
+- Mejoras de seguridad adicionales: 2FA, CAPTCHA en flujos críticos y políticas de protección contra ataques.
+- Testing automatizado integral (unitarias, integración, carga y seguridad).
+- Documentación final corregida y ampliada que cubra componentes, operación y mantenimiento.
+
 ### Tiempo Realista a Producción
 - **Beta Privada:** 6-8 semanas de desarrollo full-time
 - **Lanzamiento Público:** 12-16 semanas

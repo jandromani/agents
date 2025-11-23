@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { X, Mail, Lock, User, AlertCircle, CheckCircle, RotateCcw } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth, MfaChallengeState } from '../../contexts/AuthContext';
 import { rateLimiter, RATE_LIMITS, validateEmail, validatePassword, logSecurityEvent } from '../../lib/security';
 import { TurnstileWidget } from './TurnstileWidget';
 import { verifyTurnstileToken } from '../../lib/captcha';
@@ -22,7 +22,9 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
-  const { signIn, signUp } = useAuth();
+  const [mfaChallenge, setMfaChallenge] = useState<MfaChallengeState | null>(null);
+  const [totpCode, setTotpCode] = useState('');
+  const { signIn, signUp, verifyMfaChallenge } = useAuth();
 
   if (!isOpen) return null;
 
@@ -47,11 +49,27 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
         throw new Error('Email inválido');
       }
 
-        if (mode === 'reset') {
-          await verifyTurnstileToken(captchaToken, 'password_reset');
-          const { error } = await supabase.auth.resetPasswordForEmail(email, {
-            redirectTo: `${window.location.origin}/reset-password`,
-          });
+      if (mode === 'signin' && mfaChallenge) {
+        if (totpCode.length < 6) {
+          throw new Error('Introduce el código de 6 dígitos para continuar');
+        }
+
+        const { error: mfaError } = await verifyMfaChallenge(mfaChallenge, totpCode);
+        if (mfaError) throw mfaError;
+
+        await logSecurityEvent('login_mfa_verified', mfaChallenge.email, { email }, 'low');
+        setMfaChallenge(null);
+        setTotpCode('');
+        rateLimiter.reset(`signin_${email}`);
+        onClose();
+        return;
+      }
+
+      if (mode === 'reset') {
+        await verifyTurnstileToken(captchaToken, 'password_reset');
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
 
           if (error) throw error;
           setSuccess('Hemos enviado un enlace para restablecer tu contraseña. Revisa tu correo.');
@@ -59,56 +77,65 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
           return;
         }
 
-        const rateLimitKey = `${mode}_${email}`;
-        const rateLimit = mode === 'signup' ? RATE_LIMITS.AUTH.REGISTER : RATE_LIMITS.AUTH.LOGIN;
-        const rateLimitCheck = rateLimiter.check(rateLimitKey, rateLimit);
+      const rateLimitKey = `${mode}_${email}`;
+      const rateLimit = mode === 'signup' ? RATE_LIMITS.AUTH.REGISTER : RATE_LIMITS.AUTH.LOGIN;
+      const rateLimitCheck = rateLimiter.check(rateLimitKey, rateLimit);
 
-        if (!rateLimitCheck.allowed) {
-          await logSecurityEvent(
-            `rate_limit_exceeded_${mode}`,
-            null,
-            { email, retryAfter: rateLimitCheck.retryAfter },
-            'medium'
-          );
-          throw new Error(
-            `Demasiados intentos. Por favor, espera ${rateLimitCheck.retryAfter} segundos.`
-          );
+      if (!rateLimitCheck.allowed) {
+        await logSecurityEvent(
+          `rate_limit_exceeded_${mode}`,
+          null,
+          { email, retryAfter: rateLimitCheck.retryAfter },
+          'medium'
+        );
+        throw new Error(
+          `Demasiados intentos. Por favor, espera ${rateLimitCheck.retryAfter} segundos.`
+        );
+      }
+
+      if (mode === 'signup') {
+        await verifyTurnstileToken(captchaToken, 'signup');
+        const passwordValidation = validatePassword(password);
+        if (!passwordValidation.valid) {
+          throw new Error('La contraseña no cumple los requisitos de seguridad');
         }
-
-        if (mode === 'signup') {
-          await verifyTurnstileToken(captchaToken, 'signup');
-          const passwordValidation = validatePassword(password);
-          if (!passwordValidation.valid) {
-            throw new Error('La contraseña no cumple los requisitos de seguridad');
-          }
 
         const { error } = await signUp(email, password, fullName);
         if (error) throw error;
 
         await logSecurityEvent('user_registered', null, { email }, 'low');
-      } else {
-        const { error } = await signIn(email, password);
-        if (error) {
-          await logSecurityEvent(
-            'login_failed',
-            null,
-            { email, reason: error.message },
-            'medium'
-          );
-          throw error;
-        }
-
-        await logSecurityEvent('login_success', null, { email }, 'low');
-      }
-
         rateLimiter.reset(rateLimitKey);
         onClose();
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : 'Ha ocurrido un error';
-        setError(message);
-      } finally {
-        setLoading(false);
+        return;
       }
+
+      const { error, mfaChallenge: challenge } = await signIn(email, password);
+      if (error) {
+        await logSecurityEvent(
+          'login_failed',
+          null,
+          { email, reason: error.message },
+          'medium'
+        );
+        throw error;
+      }
+
+      if (challenge) {
+        setMfaChallenge(challenge);
+        setSuccess('Validación 2FA requerida. Ingresa el código de tu autenticador.');
+        return;
+      }
+
+      await logSecurityEvent('login_success', null, { email }, 'low');
+
+      rateLimiter.reset(rateLimitKey);
+      onClose();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Ha ocurrido un error';
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -168,7 +195,31 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
               </div>
             </div>
 
-            {mode !== 'reset' && (
+            {mode === 'signin' && mfaChallenge && (
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Código 2FA
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]{6}"
+                    value={totpCode}
+                    onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ''))}
+                    required
+                    minLength={6}
+                    maxLength={6}
+                    className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition-all"
+                    placeholder="123456"
+                  />
+                </div>
+                <p className="text-xs text-slate-500 mt-2">Usa tu app autenticadora o un código de respaldo.</p>
+              </div>
+            )}
+
+            {mode !== 'reset' && !mfaChallenge && (
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
                   Contraseña
@@ -250,6 +301,8 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
                 setMode(mode === 'signin' ? 'signup' : 'signin');
                 setError('');
                 setSuccess('');
+                setMfaChallenge(null);
+                setTotpCode('');
               }}
               className="text-cyan-600 hover:text-cyan-700 font-medium"
             >
@@ -264,6 +317,8 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
                     setMode('reset');
                     setError('');
                     setSuccess('');
+                    setMfaChallenge(null);
+                    setTotpCode('');
                   }}
                   className="text-sm text-slate-500 hover:text-slate-700 inline-flex items-center space-x-2"
                 >

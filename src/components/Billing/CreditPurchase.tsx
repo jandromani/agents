@@ -2,6 +2,10 @@ import { useState } from 'react';
 import { X, CreditCard, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { CREDIT_PACKAGES, createCreditPurchaseIntent, getStripe, formatCurrency } from '../../lib/stripe';
+import { TurnstileWidget } from '../Auth/TurnstileWidget';
+import { verifyTurnstileToken } from '../../lib/captcha';
+import { logSecurityEvent, createAuditLog } from '../../lib/security';
+import { supabase } from '../../lib/supabase';
 
 interface CreditPurchaseProps {
   isOpen: boolean;
@@ -83,6 +87,7 @@ export function CreditPurchase({ isOpen, onClose, onSuccess }: CreditPurchasePro
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
@@ -92,7 +97,14 @@ export function CreditPurchase({ isOpen, onClose, onSuccess }: CreditPurchasePro
     setError('');
 
     try {
-      const { clientSecret: secret, error: intentError } = await createCreditPurchaseIntent(packageId);
+      if (!captchaToken) {
+        throw new Error('Completa el desafío de seguridad antes de procesar el pago');
+      }
+
+      await verifyTurnstileToken(captchaToken, 'payment_intent');
+
+      const pkg = CREDIT_PACKAGES.find(p => p.id === packageId);
+      const { clientSecret: secret, error: intentError } = await createCreditPurchaseIntent(packageId, captchaToken);
 
       if (intentError) {
         throw new Error(intentError);
@@ -100,6 +112,15 @@ export function CreditPurchase({ isOpen, onClose, onSuccess }: CreditPurchasePro
 
       if (!secret) {
         throw new Error('No se pudo crear la intención de pago');
+      }
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user && pkg) {
+        await createAuditLog('payment_intent_created', user.id, 'payment', packageId, {
+          amount: pkg.price,
+          credits: pkg.credits,
+        });
+        await logSecurityEvent('payment_intent_created', user.id, { packageId, amount: pkg.price }, 'medium');
       }
 
       setClientSecret(secret);
@@ -144,6 +165,13 @@ export function CreditPurchase({ isOpen, onClose, onSuccess }: CreditPurchasePro
         </div>
 
         <div className="p-6">
+          {!success && (
+            <div className="mb-6">
+              <p className="text-xs text-slate-500">Protegido por Cloudflare Turnstile</p>
+              <TurnstileWidget action="payment_intent" onToken={setCaptchaToken} />
+            </div>
+          )}
+
           {success ? (
             <div className="text-center py-12">
               <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-4" />

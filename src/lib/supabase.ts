@@ -14,6 +14,8 @@ export type AgentStatus = 'active' | 'inactive' | 'deploying' | 'error';
 export type TransactionType = 'purchase' | 'usage' | 'refund';
 export type NotificationType = 'credit_low' | 'agent_inactive' | 'system';
 
+export type RoleType = 'admin' | 'manager' | 'analyst' | 'user' | 'viewer';
+
 export interface Profile {
   id: string;
   email: string;
@@ -21,6 +23,8 @@ export interface Profile {
   company_name?: string;
   plan_type: PlanType;
   credits: number;
+  role?: RoleType;
+  permissions?: string[];
   created_at: string;
   updated_at: string;
 }

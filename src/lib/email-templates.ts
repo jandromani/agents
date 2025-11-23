@@ -314,7 +314,6 @@ AgentHub
 
 export function lowCreditsAlertEmail(data: LowCreditsAlertData): EmailTemplate {
   const urgency = data.percentage <= 10 ? 'crítico' : 'importante';
-  const color = data.percentage <= 10 ? '#ef4444' : '#f59e0b';
 
   const html = `
     <!DOCTYPE html>

@@ -81,7 +81,7 @@ export function CreateAgentWizard({ onClose, onSuccess }: CreateAgentWizardProps
 
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('agents')
         .insert({
           user_id: profile.id,

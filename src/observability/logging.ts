@@ -1,5 +1,5 @@
-import { captureWithLevel, sendToSentry } from './sentry';
-import type { SeverityLevel } from './types';
+import { captureUptimeCheckIn, captureWithLevel, sendToSentry } from './sentry';
+import type { SeverityLevel, UptimeStatus } from './types';
 
 const consoleMethod: Record<SeverityLevel, 'error' | 'warn' | 'info' | 'debug' | 'log'> = {
   fatal: 'error',
@@ -10,7 +10,7 @@ const consoleMethod: Record<SeverityLevel, 'error' | 'warn' | 'info' | 'debug' |
   log: 'log',
 };
 
-const logPrefix = '[Observability]';
+const logPrefix = '[Observabilidad]';
 
 const logWithSeverity = (level: SeverityLevel, message: string, context?: Record<string, unknown>) => {
   const method = consoleMethod[level] || 'log';
@@ -31,6 +31,7 @@ export const captureException = (error: unknown, context?: Record<string, unknow
   });
 };
 
-export const recordUptimeHeartbeat = (service: string, status: 'up' | 'degraded' | 'down') => {
-  logInfo(`Heartbeat de uptime para ${service}: ${status}`, { service, status });
+export const recordUptimeHeartbeat = (service: string, status: UptimeStatus, durationMs?: number) => {
+  logInfo(`Heartbeat de uptime para ${service}: ${status}`, { service, status, durationMs });
+  captureUptimeCheckIn(service, status, durationMs);
 };

@@ -47,7 +47,12 @@ const handler = async (req: Request) => {
       throw new Error('Unauthorized');
     }
 
-    const { agentId } = await req.json();
+      const body = await req.json();
+      if (!body || typeof body.agentId !== 'string' || body.agentId.length < 8) {
+        throw new Error('Invalid agent identifier');
+      }
+
+      const { agentId } = body;
 
     const { data: agent, error: agentError } = await supabase
       .from('agents')

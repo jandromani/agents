@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabase, Profile } from '../lib/supabase';
-import { captureException, logError, logInfo, traceAsyncOperation } from '../observability';
+import { logError, logInfo, traceAsyncOperation } from '../observability';
 
 interface AuthContextType {
   user: User | null;

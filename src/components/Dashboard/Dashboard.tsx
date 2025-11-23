@@ -9,7 +9,9 @@ import { NotificationBell } from '../Notifications/NotificationBell';
 import { NotificationPreferences } from '../Notifications/NotificationPreferences';
 import { NotificationAdminPanel } from '../Notifications/NotificationAdminPanel';
 import { CreditPurchase } from '../Billing/CreditPurchase';
-import { useRouter } from '../../contexts/RouterContext';
+import { AdminDashboard } from '../Admin/AdminDashboard';
+import { AdminAccessModal } from '../Admin/AdminAccessModal';
+import { SecuritySettings } from '../Profile/SecuritySettings';
 
 export function Dashboard() {
   const { profile, signOut } = useAuth();
@@ -276,6 +278,10 @@ export function Dashboard() {
         <div className="grid lg:grid-cols-2 gap-6 mt-8">
           <NotificationPreferences />
           <NotificationAdminPanel />
+        </div>
+
+        <div className="mt-8">
+          <SecuritySettings />
         </div>
       </div>
 

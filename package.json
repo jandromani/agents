@@ -11,6 +11,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.app.json"
   },
   "dependencies": {
+    "@sentry/react": "^8.30.0",
+    "@sentry/replay": "^8.30.0",
     "@stripe/react-stripe-js": "^5.4.0",
     "@stripe/stripe-js": "^8.5.2",
     "@supabase/supabase-js": "^2.57.4",

@@ -63,6 +63,12 @@ export function initObservability() {
     return;
   }
 
+  const shouldEnable = import.meta.env.PROD || ['production', 'staging'].includes(environment);
+  if (!shouldEnable) {
+    console.info('[Observability] Sentry solo se inicializa en builds productivos');
+    return;
+  }
+
   const dsn = import.meta.env.VITE_SENTRY_DSN;
   if (!dsn) {
     console.info('[Observability] Sentry DSN no configurado, telemetría deshabilitada');

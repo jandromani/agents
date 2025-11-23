@@ -127,8 +127,15 @@ Alcance: Consolida guías de inicio, despliegue, Cloudflare, emails, RAG, observ
   ```
 
 ### 5.6 Observabilidad (Sentry)
-- Variables en `.env`/hosting para habilitar: `VITE_SENTRY_DSN`, `VITE_APP_ENV`, `VITE_RELEASE`, `VITE_SENTRY_TRACES_SAMPLE_RATE`, `VITE_SENTRY_PROFILES_SAMPLE_RATE`, `VITE_SENTRY_ERROR_SAMPLE_RATE`, `VITE_SENTRY_REPLAYS_SAMPLE_RATE`, `VITE_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE`, `VITE_SENTRY_CDN` (opcional).  
-- `initObservability()` en `src/main.tsx` inicia Sentry y logging centralizado; `traceAsyncOperation` envuelve operaciones críticas.
+- Variables en `.env`/hosting para habilitar: `VITE_SENTRY_DSN`, `VITE_APP_ENV`, `VITE_RELEASE`, `VITE_SENTRY_TRACES_SAMPLE_RATE`, `VITE_SENTRY_PROFILES_SAMPLE_RATE`, `VITE_SENTRY_ERROR_SAMPLE_RATE`, `VITE_SENTRY_REPLAYS_SAMPLE_RATE`, `VITE_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE`, `VITE_SENTRY_MONITOR_SLUG`, `VITE_APDEX_THRESHOLD`, `VITE_SENTRY_CDN` (opcional).
+- Edge Functions replican DSN y muestreo con `SENTRY_DSN`, `SENTRY_TRACES_SAMPLE_RATE`, `SENTRY_PROFILES_SAMPLE_RATE`, `SENTRY_ERROR_SAMPLE_RATE`, `SENTRY_MONITOR_SLUG`.
+- `initObservability()` en `src/main.tsx` arranca Sentry solo en builds productivos, añade tags globales y envía `kpis` (Apdex + monitor) en las transacciones. `createEdgeHandler` envía check-ins a Monitors y devuelve cabeceras `x-sentry-smoke-id`/`x-sentry-monitor-slug` cuando recibe `x-observability-smoke`.
+
+### 5.7 Despliegue y verificación de telemetría
+1. Configura las variables anteriores en frontend y Edge (`VITE_SENTRY_*`, `SENTRY_*`, `VITE_APDEX_THRESHOLD`, `RELEASE/ENVIRONMENT`).
+2. Despliega el frontend (Vercel/Netlify) y las funciones (`supabase functions deploy ...`). Verifica que el bundle use `import.meta.env.PROD` o `VITE_APP_ENV=production/staging` para inicializar Sentry.
+3. Ejecuta `npm run test:smoke` con `SMOKE_BASE_URL` (frontend) y `SMOKE_EDGE_SMOKE_URL` (endpoint Edge con `createEdgeHandler`). Las pruebas envían eventos `smoke:frontend-observability` y cabeceras `x-sentry-smoke-id` al capturar mensajes en Sentry.
+4. En Sentry, filtra por `release` y `environment` para localizar los eventos de humo (mensaje `smoke:frontend-observability`, tag `smoke:true` en Edge). Confirma que los Monitors reciben check-ins con el slug configurado.
 
 ## 6. Implementación funcional
 

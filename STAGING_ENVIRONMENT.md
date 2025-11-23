@@ -16,7 +16,7 @@ Este documento describe cómo montar un entorno **staging** que replica producci
 | `VITE_RELEASE` | SHA o tag del despliegue | Usa el mismo release tag que prod para pruebas de regresión |
 | `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` | Conexión al proyecto Supabase | URL de staging con el **mismo anon key** que producción |
 | `VITE_STRIPE_PUBLISHABLE_KEY` | Clave pública de Stripe | Misma publishable key que prod (modo test/real según rollout) |
-| `VITE_SENTRY_*` | DSN y muestreo | Igual que prod para comparar señal/ruido |
+| `VITE_SENTRY_*` | DSN, muestreo, slug de monitor y CDN opcional | Igual que prod para comparar señal/ruido; incluye `VITE_SENTRY_MONITOR_SLUG` y `VITE_APDEX_THRESHOLD` |
 | `VITE_TURNSTILE_SITE_KEY` | Captcha | Mismo site key que prod |
 | `VITE_SENDGRID_KEY` / `VITE_TWILIO_AUTH_TOKEN` | Integraciones de notificaciones | Misma configuración que prod |
 | `VITE_APP_URL` | Dominio público | `https://staging.agenthub.com` o el dominio de staging |
@@ -38,7 +38,7 @@ Este documento describe cómo montar un entorno **staging** que replica producci
 | `OPENAI_API_KEY` | RAG/embeddings | Misma cuenta para resultados comparables |
 | `SENDGRID_API_KEY` / `FROM_EMAIL` | Emails | Misma cuenta y remitente que prod |
 | `TURNSTILE_SECRET_KEY` / `TOTP_ENCRYPTION_KEY` | Seguridad | Idénticos para reproducir 2FA/CAPTCHA |
-| `SENTRY_DSN` / `PROM_PUSHGATEWAY_URL` | Observabilidad | Igual que prod, con `ENVIRONMENT=staging` |
+| `SENTRY_DSN` / `SENTRY_MONITOR_SLUG` / `PROM_PUSHGATEWAY_URL` | Observabilidad | Igual que prod, con `ENVIRONMENT=staging` |
 | `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` | Workers | Mismos tokens para generar workers reales |
 
 3. Después de cargar secrets:

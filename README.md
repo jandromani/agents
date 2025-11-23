@@ -1,326 +1,70 @@
-# AgentHub - Plataforma de Agentes IA Personalizados
-
-> Crea, despliega y monetiza agentes IA personalizados en minutos
-
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)]()
-[![License](https://img.shields.io/badge/license-MIT-blue)]()
-[![Completitud](https://img.shields.io/badge/completitud-88%25-green)]()
-[![Ready](https://img.shields.io/badge/beta-ready-success)]()
-
----
-
-## 📖 Descripción
-
-AgentHub es una plataforma SaaS completa que permite a empresas y emprendedores crear agentes de IA personalizados sin código. Los agentes se despliegan como Cloudflare Workers con RAG avanzado, proporcionando respuestas instantáneas 24/7 basadas en tu base de conocimiento.
-
-### ✨ Características Principales
-
-- 🤖 **Creación Sin Código**: Wizard intuitivo de 4 pasos
-- ⚡ **Despliegue Instantáneo**: Workers en Cloudflare edge network
-- 💳 **Monetización Integrada**: Sistema completo de pagos con Stripe
-- 📊 **Dashboard Completo**: Estadísticas en tiempo real
-- 🔒 **Seguridad Robusta**: Rate limiting, RLS, audit logs
-- 🔔 **Notificaciones**: Sistema in-app con badges
-- 📧 **Emails Automáticos**: SendGrid con cola inteligente
-- 🧠 **RAG Avanzado**: pgvector + embeddings + búsqueda semántica
-- 🎨 **UI Profesional**: Diseño moderno y responsive
-
----
-
-## 🚀 Inicio Rápido
-
-```bash
-# Clonar repositorio
-git clone <tu-repo>
-cd agenthub
-
-# Instalar dependencias
-npm install
-
-# Configurar variables de entorno
-cp .env.example .env
-# Editar .env con tus credenciales
-
-# Iniciar servidor de desarrollo
-npm run dev
-```
-
-**Para configuración detallada**, lee [QUICK_START.md](./QUICK_START.md)
-
----
-
-## 📚 Documentación
-
-- 📘 **Manual maestro consolidado**: [MASTER_DOCUMENTATION.md](./MASTER_DOCUMENTATION.md) reúne inicio rápido, despliegue, Cloudflare, emails, RAG, observabilidad y checklists operativos.
-
-| Fuentes detalladas | Propósito |
-|--------------------|-----------|
-| [QUICK_START.md](./QUICK_START.md) | Configuración local en 15 minutos |
-| [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) | Despliegue completo a producción |
-| [EMAIL_AND_RAG_IMPLEMENTATION.md](./EMAIL_AND_RAG_IMPLEMENTATION.md) | Guía completa de Emails y RAG |
-| [FINAL_STATUS_REPORT.md](./FINAL_STATUS_REPORT.md) | Reporte final de estado (88% completo) |
-| [CLOUDFLARE_SETUP.md](./CLOUDFLARE_SETUP.md) | Configuración de Cloudflare Workers |
-| [DEVELOPMENT_STATUS.md](./DEVELOPMENT_STATUS.md) | Estado detallado del proyecto |
-| [IMPLEMENTATION_SUMMARY.md](./IMPLEMENTATION_SUMMARY.md) | Resumen técnico de implementación |
-| [LAUNCH_MARKETING_SUPPORT.md](./LAUNCH_MARKETING_SUPPORT.md) | Manuales, onboarding y soporte para beta/producción |
-
----
-
-## 🏗️ Arquitectura
-
-```
-Frontend (React + TypeScript + Tailwind)
-    ↓
-Supabase (Auth + Database + Edge Functions)
-    ↓
-┌────────────┬─────────────┬──────────────┐
-│  Stripe    │  OpenRouter │  Cloudflare  │
-│  (Pagos)   │  (AI Models)│  (Workers)   │
-└────────────┴─────────────┴──────────────┘
-```
-
-### Stack Tecnológico
-
-**Frontend**:
-- React 18
-- TypeScript
-- Tailwind CSS
-- Vite
-- Stripe Elements
-- Lucide Icons
-
-**Backend**:
-- Supabase (PostgreSQL + Auth + Edge Functions)
-- Cloudflare Workers (Despliegue de agentes)
-- OpenRouter API (Modelos AI)
-- Stripe (Pagos y suscripciones)
-
-**Infraestructura**:
-- Vercel/Netlify (Frontend hosting)
-- Supabase Cloud (Backend)
-- Cloudflare (CDN + Workers)
-
----
-
-## ✅ Estado del Proyecto
-
-### Completado (88%)
-
-- ✅ Autenticación y autorización completa
-- ✅ Sistema de seguridad reforzado (rate limiting, password validation, audit logs)
-- ✅ Base de datos completa con RLS (18 tablas)
-- ✅ Dashboard funcional con estadísticas
-- ✅ Wizard de creación de agentes
-- ✅ Sistema de pagos con Stripe (backend + frontend completo)
-- ✅ Notificaciones in-app con badges
-- ✅ **Sistema de emails completo** (SendGrid, cola, templates) ✨
-- ✅ **RAG funcional con pgvector** (chunking, embeddings, search) ✨
-- ✅ Generación dinámica de Cloudflare Workers
-- ✅ Testing de agentes en tiempo real
-- ✅ Gestión de créditos y suscripciones
-- ✅ 10 Edge Functions desplegadas
-
-### Pendiente (12%)
-
-- ⚠️ PDF/DOCX parsing avanzado
-- ⚠️ Panel administrativo completo
-- ⚠️ Monitoring con Sentry
-- ⚠️ Testing automatizado (E2E)
-- ⚠️ CAPTCHA y 2FA
-
-Ver [FINAL_STATUS_REPORT.md](./FINAL_STATUS_REPORT.md) para análisis completo.
-
----
-
-## 🎯 Roadmap
-
-### v1.0 - MVP Beta (6-8 semanas)
-- [ ] Sistema de emails completo
-- [ ] RAG básico funcional
-- [ ] Monitoring con Sentry
-- [ ] Testing E2E crítico
-- [ ] Beta con 50-100 usuarios
-
-### v1.5 - Producción (12-16 semanas)
-- [ ] Panel administrativo
-- [ ] RAG avanzado
-- [ ] 2FA
-- [ ] Testing comprehensivo
-- [ ] Lanzamiento público
-
-### v2.0 - Escalabilidad
-- [ ] Agent marketplace
-- [ ] Collaboration features
-- [ ] White label
-- [ ] Multi-idioma
-- [ ] App móvil
-
----
-
-## 💼 Casos de Uso
-
-### 🍔 Restaurantes
-Agente que responde consultas sobre menú, horarios, reservas 24/7.
-**Resultado**: -40% llamadas telefónicas
-
-### 💇 Peluquerías
-Gestión automática de citas y consultas de servicios.
-**Resultado**: +60% reservas online
-
-### 🏋️ Gimnasios
-Información sobre planes, horarios, clases disponibles.
-**Resultado**: Atención 24/7 sin personal
-
-### 🏠 Inmobiliarias
-Respuestas sobre propiedades, precios, características.
-**Resultado**: +85% tasa de respuesta
-
----
-
-## 🔒 Seguridad
-
-- ✅ **Rate Limiting**: Protección contra brute force y DDoS
-- ✅ **RLS**: Row Level Security en todas las tablas
-- ✅ **Audit Logs**: Registro completo de acciones
-- ✅ **Password Policy**: Mínimo 12 caracteres con requisitos
-- ✅ **CSP Headers**: Content Security Policy
-- ✅ **Input Sanitization**: Limpieza automática de inputs
-- ✅ **Session Management**: Gestión segura de sesiones
-
----
-
-## 💳 Planes y Precios
-
-### Free
-- 1 agente activo
-- 5 consultas/día
-- Modelos básicos
-- **€0/mes**
-
-### Premium Basic
-- 3 agentes activos
-- 100 consultas/día
-- Modelos avanzados
-- RAG ilimitado
-- **€29/mes**
-
-### Premium Ultra
-- 10 agentes activos
-- Consultas ilimitadas
-- Todos los modelos
-- Soporte 24/7
-- **€99/mes**
-
----
-
-## 🛠️ Desarrollo
-
-### Requisitos
-
-- Node.js 18+
-- npm 8+
-- Cuenta de Supabase
-- Cuenta de Stripe (test mode)
-
-### Scripts
-
-```bash
-# Desarrollo
-npm run dev
-
-# Build
-npm run build
-
-# Preview build
-npm run preview
-
-# Lint
-npm run lint
-
-# Type check
-npm run typecheck
-```
-
-### Estructura del Proyecto
-
-```
-/src
-  /components
-    /Auth          # Autenticación
-    /Dashboard     # Panel principal
-    /Billing       # Pagos y planes
-    /Notifications # Sistema de notificaciones
-  /contexts        # React contexts
-  /lib             # Utilidades y servicios
-
-/supabase
-  /functions       # Edge Functions
-  /migrations      # Migraciones de BD
-```
-
----
-
-## 📊 Métricas
-
-- **Bundle Size**: 413KB (gzipped: 114KB)
-- **CSS**: 27KB (gzipped: 5.2KB)
-- **Build Time**: ~7 segundos
-- **Líneas de Código**: ~8,000
-- **Componentes**: 15+
-- **Edge Functions**: 6
-- **Tablas de BD**: 15+
-
----
-
-## 🤝 Contribuir
-
-Las contribuciones son bienvenidas. Por favor:
-
-1. Fork el repositorio
-2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add AmazingFeature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abre un Pull Request
-
----
-
-## 📝 Licencia
-
-Este proyecto está bajo licencia MIT. Ver `LICENSE` para más detalles.
-
----
-
-## 🆘 Soporte
-
-- **Documentación**: Ver carpeta de docs
-- **Issues**: [GitHub Issues](link-to-issues)
-- **Email**: support@agenthub.com
-
----
-
-## 🙏 Agradecimientos
-
-- [Supabase](https://supabase.com) - Backend as a Service
-- [Stripe](https://stripe.com) - Procesamiento de pagos
-- [Cloudflare](https://cloudflare.com) - Edge computing
-- [OpenRouter](https://openrouter.ai) - Acceso a modelos AI
-- [Lucide](https://lucide.dev) - Iconos
-- [Tailwind CSS](https://tailwindcss.com) - Estilos
-
----
-
-## 📞 Contacto
-
-- Website: [agenthub.com](https://agenthub.com)
-- Email: hello@agenthub.com
-- Twitter: [@agenthub](https://twitter.com/agenthub)
-
----
-
-<p align="center">
-  Hecho con ❤️ por el equipo de AgentHub
-</p>
-
-<p align="center">
-  <sub>⭐ Si te gusta este proyecto, dale una estrella en GitHub!</sub>
-</p>
+# AgentHub — Documentación Única
+
+Esta guía fusiona todas las referencias previas (inicio rápido, despliegue, Cloudflare, emails, RAG, seguridad, observabilidad, planes y estado). Aquí encontrarás lo necesario para desarrollar, lanzar y operar AgentHub sin consultar múltiples archivos.
+
+## 1. Visión general
+- SaaS para crear y desplegar agentes IA sin código sobre React + TypeScript + Tailwind, con backend en Supabase y workers en Cloudflare.
+- Integraciones: Stripe (pagos/suscripciones), OpenRouter/OpenAI (LLM + embeddings), SendGrid/SES (emails), pgvector (RAG) y Sentry + Prometheus (observabilidad).
+- Seguridad base: RLS en todas las tablas, rate limiting, políticas de contraseñas (12+ chars con complejidad), audit/security logs y CSP.
+- Estado actual: ~88% completado, listo para beta privada; pendientes principales: parsing avanzado de PDF/DOCX, panel admin completo, E2E, CAPTCHA/2FA extendidos y monitorización Sentry en producción.
+
+## 2. Inicio rápido local (≤15 min)
+1. Clona e instala:
+   ```bash
+   git clone <tu-repo>
+   cd agenthub
+   npm install
+   cp .env.example .env
+   ```
+2. Completa `.env` (ver matriz de variables en la sección 3) y valida con `ENV_FILE=.env npm run lint:env`.
+3. Configura Supabase: crea proyecto, copia `Project URL` y `anon public key`, actualiza `.env` y aplica migraciones en el SQL Editor en orden:
+   - `supabase/migrations/20251123093001_create_initial_schema.sql`
+   - `supabase/migrations/20251123100005_create_security_and_audit_tables.sql`
+   - `supabase/migrations/20251123100140_create_payment_tables.sql`
+4. Ejecuta local: `npm run dev` y abre http://localhost:5173. Flujo de humo: registro (password 12+), login, crear agente (modo simulación si no hay Cloudflare), ver notificaciones.
+
+## 3. Variables y secrets imprescindibles
+- **Frontend (Vite)**: `VITE_APP_ENV`, `VITE_APP_NAME`, `VITE_APP_URL`, `VITE_RELEASE`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_STRIPE_PUBLISHABLE_KEY`, `VITE_TURNSTILE_SITE_KEY`, `VITE_SENDGRID_KEY`, `VITE_TWILIO_AUTH_TOKEN`, `VITE_SENTRY_DSN`, `VITE_SENTRY_CDN`, `VITE_SENTRY_MONITOR_SLUG`, `VITE_SENTRY_TRACES_SAMPLE_RATE`, `VITE_SENTRY_PROFILES_SAMPLE_RATE`, `VITE_SENTRY_ERROR_SAMPLE_RATE`, `VITE_SENTRY_REPLAYS_SAMPLE_RATE`, `VITE_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE`, `VITE_APDEX_THRESHOLD`.
+- **Edge Functions / backend (Supabase → Edge Functions → Secrets)**: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_BASIC`, `STRIPE_PRICE_ULTRA`, `OPENAI_API_KEY`, `SENDGRID_API_KEY`, `FROM_EMAIL`, `TURNSTILE_SECRET_KEY`, `TOTP_ENCRYPTION_KEY`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `SENTRY_DSN`, `SENTRY_TRACES_SAMPLE_RATE`, `SENTRY_PROFILES_SAMPLE_RATE`, `SENTRY_ERROR_SAMPLE_RATE`, `SENTRY_DEBUG`, `ENVIRONMENT`, `RELEASE`, `PROM_PUSHGATEWAY_URL`, `HOSTNAME`.
+- Usa los mismos valores en staging y producción para detectar drift; carga staging con `supabase secrets set --env-file supabase/.env.staging.example`.
+
+## 4. Servicios externos y configuración
+- **Supabase**: linkea proyecto (`supabase login` + `supabase link --project-ref <ref>`). Despliega funciones clave: `deploy-agent`, `track-usage`, `manage-credits`, `stripe-webhook`, `create-checkout`, `create-payment-intent`, `send-email`, `process-email-queue`, `process-document`, `semantic-search`.
+- **Stripe**: modo test; crea productos Premium Basic (€29/mes, 3 agentes, 100 consultas/día) y Premium Ultra (€99/mes, 10 agentes, consultas ilimitadas). Webhook en `https://<project>.supabase.co/functions/v1/stripe-webhook` con eventos `customer.*`, `payment_intent.*`, `invoice.*`, `customer.subscription.*`, `payment_method.attached`. Define `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_BASIC`, `STRIPE_PRICE_ULTRA`, `VITE_STRIPE_PUBLISHABLE_KEY`.
+- **OpenRouter/OpenAI**: crea API key (`sk-or-...` o `sk-...`) y guárdala como `OPENAI_API_KEY`; necesaria para pruebas reales y RAG.
+- **Cloudflare Workers**: requiere `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_API_TOKEN` (permiso Edit Workers). Sin credenciales funciona en modo simulación: crea agentes y URLs simuladas pero no despliega ni prueba workers. Con credenciales, se genera worker `agent-{uuid16}` en `https://agent-{id}.{account}.workers.dev` con modelo, contexto y límites por plan.
+- **Emails (SendGrid/SES)**: usar `SENDGRID_API_KEY` y `FROM_EMAIL` (o credenciales SES). Arquitectura: templates (`src/lib/email-templates.ts`) + tablas `email_queue`/`email_logs`/`email_templates` + Edge Functions `send-email` (envío directo) y `process-email-queue` (batch, prioridad, retry exponencial). Webhooks Stripe añaden correos de confirmación a la cola.
+- **Observabilidad (Sentry/Prometheus)**: `initObservability` en `src/main.tsx` carga Sentry desde CDN; helpers de logging/tracing en `src/observability/*`. Ajusta muestreos por entorno (ej. dev: traces 0.1; prod: traces 0.3, profiles 0.1). `recordUptimeHeartbeat` soporta Monitors; `PROM_PUSHGATEWAY_URL` habilita métricas de Edge (`edge_latency_ms`, `edge_failure_total`, `edge_queue_depth`).
+
+## 5. Despliegue
+- **Frontend**: build con `npm run build`; host en Vercel/Netlify/Cloudflare Pages. Define todas las variables `VITE_` y DSN de Sentry. Usa `VITE_RELEASE` con el SHA/tag desplegado.
+- **Supabase**: `npx supabase db push` para migraciones y `supabase functions deploy <fn>` para funciones. Mantén secrets iguales en staging/prod; etiqueta entorno con `ENVIRONMENT` y `VITE_APP_ENV`.
+- **Workers**: tras configurar Cloudflare, `deploy-agent` generará y publicará el worker al crear un agente. Si falla, revisa permisos del token y créditos OpenRouter.
+
+## 6. Operación y runbooks clave
+- **Seguridad**: rate limits en login/registro/reset/deploy/queries; password policy reforzada; limpieza de intentos fallidos; RLS estricta; CSP y sanitización en `src/lib/security.ts`. Pen-tests recomendados con OWASP ASVS/API y 2FA/CAPTCHA activo; preparar staging con cuentas efímeras y auditoría via `audit_logs` y `security_logs`.
+- **Pagos**: `stripe-webhook` maneja `customer.*`, `payment_intent.*`, `invoice.*`, `customer.subscription.*`, `payment_method.attached`, calcula comisión 10%, actualiza créditos y notificaciones. Usa productos/price IDs reales y webhook `whsec_` en secrets.
+- **Emails**: consulta `email_logs` para últimos envíos y `email_queue` para pendientes por prioridad; `process-email-queue` cada 5 min (cron SQL o externo) con 3 reintentos (5m/10m/15m).
+- **RAG**: flujo `documents` → `process-document` (chunking 1000 chars, overlap 200, embeddings OpenAI, `document_chunks` con pgvector) → `semantic-search` (top-K con `search_similar_chunks`). Logs en `rag_queries`.
+- **Observabilidad**: dashboards en Sentry con tags `app`, `environment`, `feature`; alertas sugeridas: p99 >2s para `process-document`, ratio de fallos >2% en pagos/agentes, `edge_queue_depth` email >50 por 10m. Uptime vía Monitors (`<slug>.<servicio>`). Usa `traceAsyncOperation` y `log*` helpers en nuevas rutas.
+- **Staging paritario**: duplica `.env.staging.example`, usa mismas claves que producción (URLs distintas). Carga secrets con CLI, despliega funciones y aplica migraciones. Repite lint/typecheck/tests cuando el mirror de npm permita instalar Playwright.
+
+## 7. Lanzamiento y soporte
+- **Marketing/soporte**: onboarding con manuales breves, FAQ y assets de landing; canal de soporte con SLA para beta privada; notificaciones in-app y emails automáticos ya integrados.
+- **KPIs de readiness**: beta privada activada con seguridad, pagos, emails y RAG funcionales; plan de pruebas de penetración en cola; métricas y alertas configuradas.
+
+## 8. Estado y roadmap
+- Completitud promedio 88% (landing, auth, seguridad, dashboard, agentes, pagos, notificaciones, emails, RAG, BD y functions casi listas para producción).
+- Pendientes inmediatos: parser avanzado de documentos, panel admin, E2E automatizado, refuerzo CAPTCHA/2FA, monitorización Sentry en prod y migrar dependencias de Playwright a un registro accesible.
+- Próximas versiones: v1.0 beta (emails y RAG básicos, monitoring, E2E crítico, beta 50-100 usuarios); v1.5 producción (admin panel, RAG avanzado, 2FA, testing amplio); v2.0 escalabilidad (marketplace, colaboración, white label, multi-idioma, móvil).
+
+## 9. Comandos de utilidad
+- Desarrollo: `npm run dev`
+- Build: `npm run build`
+- Preview: `npm run preview`
+- Lint: `npm run lint`
+- Type check: `npm run typecheck`
+
+## 10. Contacto
+- Soporte: support@agenthub.com | hello@agenthub.com | Twitter @agenthub
+- Issues: abre tickets en GitHub.

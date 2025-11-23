@@ -1,3 +1,4 @@
+import { appName, buildMonitorSlug, defaultTags, environment, parseSampleRate, release, sampleRates } from './config';
 import type { SeverityLevel } from './types';
 
 declare global {
@@ -10,11 +11,6 @@ const SENTRY_SCRIPT_URL = import.meta.env.VITE_SENTRY_CDN ||
   'https://browser.sentry-cdn.com/7.120.1/bundle.tracing.replay.min.js';
 
 let sentryClientPromise: Promise<any | null> | null = null;
-
-const parseSampleRate = (value: string | undefined, fallback: number) => {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : fallback;
-};
 
 async function loadSentryScript(src: string) {
   return new Promise<void>((resolve, reject) => {
@@ -40,6 +36,28 @@ async function loadSentryScript(src: string) {
   });
 }
 
+const withStaticTags = <T extends { tags?: Record<string, string> }>(event: T): T => ({
+  ...event,
+  tags: {
+    ...defaultTags,
+    ...event.tags,
+  },
+});
+
+const enrichEventContext = <T extends { tags?: Record<string, string>; release?: string }>(event: T): T => {
+  const enriched = withStaticTags(event);
+  if (release) {
+    enriched.release = release;
+  }
+  return enriched;
+};
+
+const mapUptimeStatus = {
+  up: 'ok',
+  degraded: 'in_progress',
+  down: 'error',
+} as const;
+
 export function initObservability() {
   if (typeof window === 'undefined' || sentryClientPromise) {
     return;
@@ -57,18 +75,15 @@ export function initObservability() {
         throw new Error('El SDK de Sentry no está disponible tras la carga del script');
       }
 
-      const environment = import.meta.env.VITE_APP_ENV || import.meta.env.MODE;
-      const release = import.meta.env.VITE_RELEASE;
-
       window.Sentry.init({
         dsn,
         environment,
         release,
-        sampleRate: parseSampleRate(import.meta.env.VITE_SENTRY_ERROR_SAMPLE_RATE, 1.0),
-        tracesSampleRate: parseSampleRate(import.meta.env.VITE_SENTRY_TRACES_SAMPLE_RATE, 0.3),
-        profilesSampleRate: parseSampleRate(import.meta.env.VITE_SENTRY_PROFILES_SAMPLE_RATE, 0.1),
-        replaysSessionSampleRate: parseSampleRate(import.meta.env.VITE_SENTRY_REPLAYS_SAMPLE_RATE, 0.0),
-        replaysOnErrorSampleRate: parseSampleRate(import.meta.env.VITE_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE, 1.0),
+        sampleRate: sampleRates.error,
+        tracesSampleRate: sampleRates.traces,
+        profilesSampleRate: sampleRates.profiles,
+        replaysSessionSampleRate: sampleRates.replaysSession,
+        replaysOnErrorSampleRate: sampleRates.replaysOnError,
         integrations: (integrations) => {
           const baseIntegrations = integrations || [];
           if (window.Sentry.BrowserTracing) {
@@ -83,17 +98,32 @@ export function initObservability() {
           return baseIntegrations;
         },
         beforeSend(event) {
-          if (event.level === 'error' || event.level === 'fatal') {
-            event.tags = { ...event.tags, severity: event.level };
-          }
-          return event;
+          const enriched = enrichEventContext(event);
+          enriched.fingerprint = enriched.fingerprint || ['{{ default }}', environment];
+          return enriched;
         },
+        beforeSendTransaction(event) {
+          const enriched = enrichEventContext(event);
+          enriched.contexts = {
+            ...enriched.contexts,
+            kpis: {
+              apdexT: parseSampleRate(import.meta.env.VITE_APDEX_THRESHOLD, 0.3),
+              monitor: buildMonitorSlug(),
+            },
+          };
+          return enriched;
+        },
+      });
+
+      window.Sentry.configureScope((scope: any) => {
+        scope.setTags(defaultTags);
+        scope.setContext('runtime', { app: appName, environment, release });
       });
 
       return window.Sentry;
     })
     .catch(error => {
-      console.error('[Observability] No se pudo inicializar Sentry', error);
+      console.error('[Observabilidad] No se pudo inicializar Sentry', error);
       return null;
     });
 }
@@ -115,5 +145,20 @@ export const captureWithLevel = (level: SeverityLevel, message: string, context?
     if (level === 'error' || level === 'fatal') {
       client.captureMessage(message, { level, extra: context });
     }
+  });
+};
+
+export const captureUptimeCheckIn = (service: string, status: keyof typeof mapUptimeStatus, duration?: number) => {
+  const monitor = buildMonitorSlug(service);
+  if (!monitor) return;
+
+  sendToSentry(client => {
+    client.captureCheckIn({
+      monitorSlug: monitor,
+      status: mapUptimeStatus[status],
+      duration,
+      release,
+      environment,
+    });
   });
 };

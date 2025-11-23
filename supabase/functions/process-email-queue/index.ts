@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
+import { createEdgeHandler } from '../_shared/observability.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -6,7 +7,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type',
 };
 
-Deno.serve(async (req: Request) => {
+const handler = async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, {
       status: 204,
@@ -213,4 +214,6 @@ Deno.serve(async (req: Request) => {
       }
     );
   }
-});
+};
+
+Deno.serve(createEdgeHandler({ feature: 'process-email-queue', queueName: 'email' }, handler));

@@ -64,6 +64,7 @@ export function initObservability() {
         dsn,
         environment,
         release,
+        sampleRate: parseSampleRate(import.meta.env.VITE_SENTRY_ERROR_SAMPLE_RATE, 1.0),
         tracesSampleRate: parseSampleRate(import.meta.env.VITE_SENTRY_TRACES_SAMPLE_RATE, 0.3),
         profilesSampleRate: parseSampleRate(import.meta.env.VITE_SENTRY_PROFILES_SAMPLE_RATE, 0.1),
         replaysSessionSampleRate: parseSampleRate(import.meta.env.VITE_SENTRY_REPLAYS_SAMPLE_RATE, 0.0),

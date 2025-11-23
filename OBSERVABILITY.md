@@ -7,6 +7,7 @@ Esta app usa Sentry para tracing distribuido, captura de errores y consolidador 
 Añade las siguientes claves al entorno de Vite (`.env` o variables de despliegue):
 
 - `VITE_SENTRY_DSN` (obligatoria para habilitar Sentry)
+- `REACT_APP_SENTRY_DSN` (alias de compatibilidad si tu plataforma ya expone variables `REACT_APP_*`)
 - `VITE_APP_ENV` (ej. `production`, `staging`)
 - `VITE_RELEASE` (SHA o tag del despliegue para versionar incidencias)
 - `VITE_APP_NAME` (nombre lógico de la app; se añade como tag en todos los eventos)
@@ -23,6 +24,8 @@ Para las Edge Functions (Deno), alinea las variables con el frontend para manten
 
 - `SENTRY_DSN`, `SENTRY_TRACES_SAMPLE_RATE`, `SENTRY_PROFILES_SAMPLE_RATE`, `SENTRY_ERROR_SAMPLE_RATE`
 - `SENTRY_MONITOR_SLUG` (slug base para check-ins de Monitors)
+- `CLOUDFLARE_SENTRY_DSN` (alternativa específica para Workers; si está definida se usará antes que `SENTRY_DSN`)
+- `PROM_PUSHGATEWAY_URL` (habilita el push de métricas de Workers y funciones edge en formato Prometheus)
 
 Si no se define `VITE_SENTRY_DSN`, la telemetría queda desactivada de forma segura.
 

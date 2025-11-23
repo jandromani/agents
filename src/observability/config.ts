@@ -1,6 +1,8 @@
-export const environment = import.meta.env.VITE_APP_ENV || import.meta.env.MODE || 'development';
+export const environment =
+  import.meta.env.VITE_APP_ENV || import.meta.env.REACT_APP_ENV || import.meta.env.MODE || 'development';
 export const release = import.meta.env.VITE_RELEASE;
 export const appName = import.meta.env.VITE_APP_NAME || 'agents-frontend';
+export const sentryDsn = import.meta.env.VITE_SENTRY_DSN || import.meta.env.REACT_APP_SENTRY_DSN;
 export const monitorSlug = import.meta.env.VITE_SENTRY_MONITOR_SLUG;
 
 export const defaultTags = {

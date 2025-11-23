@@ -51,12 +51,14 @@ npm run dev
 
 ## 📚 Documentación
 
-| Documento | Descripción |
-|-----------|-------------|
+- 📘 **Manual maestro consolidado**: [MASTER_DOCUMENTATION.md](./MASTER_DOCUMENTATION.md) reúne inicio rápido, despliegue, Cloudflare, emails, RAG, observabilidad y checklists operativos.
+
+| Fuentes detalladas | Propósito |
+|--------------------|-----------|
 | [QUICK_START.md](./QUICK_START.md) | Configuración local en 15 minutos |
 | [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) | Despliegue completo a producción |
-| [EMAIL_AND_RAG_IMPLEMENTATION.md](./EMAIL_AND_RAG_IMPLEMENTATION.md) | **NUEVO**: Guía completa de Emails y RAG |
-| [FINAL_STATUS_REPORT.md](./FINAL_STATUS_REPORT.md) | **NUEVO**: Reporte final de estado (88% completo) |
+| [EMAIL_AND_RAG_IMPLEMENTATION.md](./EMAIL_AND_RAG_IMPLEMENTATION.md) | Guía completa de Emails y RAG |
+| [FINAL_STATUS_REPORT.md](./FINAL_STATUS_REPORT.md) | Reporte final de estado (88% completo) |
 | [CLOUDFLARE_SETUP.md](./CLOUDFLARE_SETUP.md) | Configuración de Cloudflare Workers |
 | [DEVELOPMENT_STATUS.md](./DEVELOPMENT_STATUS.md) | Estado detallado del proyecto |
 | [IMPLEMENTATION_SUMMARY.md](./IMPLEMENTATION_SUMMARY.md) | Resumen técnico de implementación |

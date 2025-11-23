@@ -19,6 +19,11 @@ Añade las siguientes claves al entorno de Vite (`.env` o variables de despliegu
 - `VITE_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE` (0-1, default 1.0)
 - `VITE_SENTRY_CDN` (opcional, URL alternativa del bundle de Sentry si usas un mirror interno)
 
+Para las Edge Functions (Deno), alinea las variables con el frontend para mantener el mismo muestreo y monitor:
+
+- `SENTRY_DSN`, `SENTRY_TRACES_SAMPLE_RATE`, `SENTRY_PROFILES_SAMPLE_RATE`, `SENTRY_ERROR_SAMPLE_RATE`
+- `SENTRY_MONITOR_SLUG` (slug base para check-ins de Monitors)
+
 Si no se define `VITE_SENTRY_DSN`, la telemetría queda desactivada de forma segura.
 
 ## Componentes técnicos
@@ -84,6 +89,12 @@ Si no se define `VITE_SENTRY_DSN`, la telemetría queda desactivada de forma seg
 - **Autenticación**: filtra issues por tag `feature:auth` para revisar fallos de login/signup; los spans incluyen `userId`/email en los datos extra.
 - **Panel/Dashboard**: busca `feature:dashboard` y usa los spans `dashboard.loadAgents`, `dashboard.loadStats` o `dashboard.deleteAgent` para identificar consultas lentas o errores de Supabase.
 - **Registro manual**: usa los helpers de logging/tracing en nuevas llamadas externas para mantener la cobertura APM consistente.
+
+## Pruebas de humo de telemetría
+
+- Ejecuta `npm run test:smoke` con `E2E_BASE_URL` o `SMOKE_BASE_URL` apuntando al frontend desplegado. La prueba `observability-smoke` valida que `initObservability` cargue el SDK en producción y pueda enviar un `captureMessage` exitoso a Sentry.
+- Para Edge Functions, define `SMOKE_EDGE_SMOKE_URL` (endpoint desplegado que use `createEdgeHandler`), opcionalmente `SMOKE_EDGE_SMOKE_METHOD` y `SMOKE_EDGE_AUTHORIZATION`. La prueba espera cabeceras `x-sentry-smoke-id` y `x-sentry-monitor-slug` generadas por el wrapper al capturar el evento de humo en Sentry.
+- Usa la misma DSN y slug (`SENTRY_MONITOR_SLUG`) que producción en staging para asegurar que las pruebas midan la ruta real de ingesta de Sentry.
 
 ## Buenas prácticas operativas
 

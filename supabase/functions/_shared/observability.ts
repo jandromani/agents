@@ -21,6 +21,34 @@ const parseSampleRate = (value: string | undefined, fallback: number) => {
 };
 
 let sentryInitialized = false;
+const monitorSlug = Deno.env.get('SENTRY_MONITOR_SLUG');
+
+const buildMonitorSlug = (service?: string) => {
+  if (!monitorSlug && !service) return undefined;
+  return [monitorSlug, service].filter(Boolean).join('.');
+};
+
+const recordEdgeCheckIn = (monitor: string | undefined, status: 'ok' | 'error' | 'in_progress', durationMs?: number) => {
+  if (!sentryInitialized || !monitor) return undefined;
+
+  return Sentry.captureCheckIn({
+    monitorSlug: monitor,
+    status,
+    duration: durationMs !== undefined ? durationMs / 1000 : undefined,
+  });
+};
+
+const captureEdgeSmokeEvent = (feature: string, status: number) => {
+  if (!sentryInitialized) return undefined;
+
+  return Sentry.captureMessage('edge-smoke-observability', scope => {
+    scope.setLevel('info');
+    scope.setTag('feature', feature);
+    scope.setTag('smoke', 'true');
+    scope.setExtra('status', status);
+    return scope;
+  });
+};
 
 export const initEdgeObservability = () => {
   if (sentryInitialized) return;
@@ -31,9 +59,11 @@ export const initEdgeObservability = () => {
     return;
   }
 
+  const environment = Deno.env.get('ENVIRONMENT') || Deno.env.get('MODE') || Deno.env.get('NODE_ENV') || 'development';
+
   Sentry.init({
     dsn,
-    environment: Deno.env.get('ENVIRONMENT') || Deno.env.get('MODE') || Deno.env.get('NODE_ENV') || 'development',
+    environment,
     tracesSampleRate: parseSampleRate(Deno.env.get('SENTRY_TRACES_SAMPLE_RATE'), 0.2),
     profilesSampleRate: parseSampleRate(Deno.env.get('SENTRY_PROFILES_SAMPLE_RATE'), 0.05),
     sampleRate: parseSampleRate(Deno.env.get('SENTRY_ERROR_SAMPLE_RATE'), 0.5),
@@ -119,10 +149,12 @@ export const createEdgeHandler = (
   handler: (req: Request) => Promise<Response>,
 ) => {
   initEdgeObservability();
+  const monitor = buildMonitorSlug(options.feature);
 
   return async (req: Request) => {
     const start = performance.now();
     const queueDepth = getQueueDepth(req, options.queueDepthHeader);
+    const smokeHeader = req.headers.get('x-observability-smoke');
     try {
       const response = await handler(req);
       const latencyMs = performance.now() - start;
@@ -135,6 +167,14 @@ export const createEdgeHandler = (
       };
       await pushMetrics(metric);
       recordWithSentry(metric);
+      recordEdgeCheckIn(monitor, 'ok', latencyMs);
+      const smokeEventId = smokeHeader ? captureEdgeSmokeEvent(options.feature, response.status) : undefined;
+      if (smokeEventId) {
+        response.headers.set('x-sentry-smoke-id', smokeEventId);
+      }
+      if (monitor) {
+        response.headers.set('x-sentry-monitor-slug', monitor);
+      }
       return response;
     } catch (error) {
       const latencyMs = performance.now() - start;
@@ -148,10 +188,18 @@ export const createEdgeHandler = (
       };
       await pushMetrics(metric);
       recordWithSentry(metric);
+      recordEdgeCheckIn(monitor, 'error', latencyMs);
+      const smokeEventId = smokeHeader ? captureEdgeSmokeEvent(options.feature, 500) : undefined;
       const fallbackResponse = new Response(JSON.stringify({ error: 'Internal server error' }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' },
       });
+      if (smokeEventId) {
+        fallbackResponse.headers.set('x-sentry-smoke-id', smokeEventId);
+      }
+      if (monitor) {
+        fallbackResponse.headers.set('x-sentry-monitor-slug', monitor);
+      }
       return fallbackResponse;
     }
   };

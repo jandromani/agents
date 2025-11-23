@@ -2,6 +2,7 @@ import { Buffer } from 'node:buffer';
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import mammoth from 'npm:mammoth';
 import pdfParse from 'npm:pdf-parse';
+import { createEdgeHandler } from '../_shared/observability.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -17,7 +18,7 @@ interface ProcessDocumentRequest {
   base64Content?: string;
 }
 
-Deno.serve(async (req: Request) => {
+const handler = async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, {
       status: 204,
@@ -189,7 +190,9 @@ Deno.serve(async (req: Request) => {
       }
     );
   }
-});
+};
+
+Deno.serve(createEdgeHandler({ feature: 'process-document', queueName: 'documents' }, handler));
 
 interface ExtractTextParams {
   providedText?: string;

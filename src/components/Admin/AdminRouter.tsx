@@ -27,10 +27,25 @@ export function AdminRouter() {
     traceAsyncOperation('admin.bootstrap', async () => {
       setLoading(true);
       const [profilesResult, paymentsResult, auditResult, agentsResult] = await Promise.all([
-        supabase.from('profiles').select('*').limit(200),
-        supabase.from('stripe_payments').select('*').limit(200),
-        supabase.from('audit_logs').select('*').order('created_at', { ascending: false }).limit(200),
-        supabase.from('agents').select('*').limit(200),
+        supabase
+          .from('profiles')
+          .select('id, email, full_name, role, plan_type, credits, created_at')
+          .limit(200),
+        supabase
+          .from('stripe_payments')
+          .select('id, customer_email, amount, currency, status, invoice_id, created_at')
+          .order('created_at', { ascending: false })
+          .limit(200),
+        supabase
+          .from('audit_logs')
+          .select('id, action, actor, role, entity, severity, created_at')
+          .order('created_at', { ascending: false })
+          .limit(200),
+        supabase
+          .from('agents')
+          .select('id, name, model, status, total_queries, updated_at, user_id')
+          .order('updated_at', { ascending: false })
+          .limit(200),
       ]);
 
       if (profilesResult.error) {

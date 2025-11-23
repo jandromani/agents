@@ -6,6 +6,8 @@ import { AgentCard } from './AgentCard';
 import { CreateAgentWizard } from './CreateAgentWizard';
 import { StatsCard } from './StatsCard';
 import { NotificationBell } from '../Notifications/NotificationBell';
+import { NotificationPreferences } from '../Notifications/NotificationPreferences';
+import { NotificationAdminPanel } from '../Notifications/NotificationAdminPanel';
 import { CreditPurchase } from '../Billing/CreditPurchase';
 
 export function Dashboard() {
@@ -235,6 +237,11 @@ export function Dashboard() {
               ))}
             </div>
           )}
+        </div>
+
+        <div className="grid lg:grid-cols-2 gap-6 mt-8">
+          <NotificationPreferences />
+          <NotificationAdminPanel />
         </div>
       </div>
 

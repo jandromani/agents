@@ -9,18 +9,15 @@ import { NotificationBell } from '../Notifications/NotificationBell';
 import { NotificationPreferences } from '../Notifications/NotificationPreferences';
 import { NotificationAdminPanel } from '../Notifications/NotificationAdminPanel';
 import { CreditPurchase } from '../Billing/CreditPurchase';
-import { AdminDashboard } from '../Admin/AdminDashboard';
-import { AdminAccessModal } from '../Admin/AdminAccessModal';
+import { useRouter } from '../../contexts/RouterContext';
 
 export function Dashboard() {
   const { profile, signOut } = useAuth();
+  const { navigate } = useRouter();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateWizard, setShowCreateWizard] = useState(false);
   const [showCreditPurchase, setShowCreditPurchase] = useState(false);
-  const [showAdminAccess, setShowAdminAccess] = useState(false);
-  const [adminSessionActive, setAdminSessionActive] = useState(false);
-  const [adminValidatedAt, setAdminValidatedAt] = useState<Date | null>(null);
   const [stats, setStats] = useState({
     totalQueries: 0,
     activeAgents: 0,
@@ -122,8 +119,9 @@ export function Dashboard() {
     return badges[profile?.plan_type || 'free'];
   };
 
+  const adminRoles = ['admin', 'superadmin', 'soporte', 'finanzas', 'moderador'];
   const isAdminProfile = Boolean(
-    profile?.role === 'admin' ||
+    (profile?.role && adminRoles.includes(profile.role)) ||
     profile?.permissions?.includes('admin') ||
     profile?.email?.toLowerCase().includes('admin')
   );
@@ -178,7 +176,7 @@ export function Dashboard() {
 
               {isAdminProfile && (
                 <button
-                  onClick={() => setShowAdminAccess(true)}
+                  onClick={() => navigate('/admin')}
                   className="flex items-center space-x-2 px-4 py-2 rounded-lg border border-cyan-200 text-cyan-700 font-semibold hover:bg-cyan-50 transition-colors"
                 >
                   <ShieldCheck className="w-5 h-5" />
@@ -297,24 +295,6 @@ export function Dashboard() {
         }}
       />
 
-      {adminSessionActive && (
-        <AdminDashboard
-          onClose={() => setAdminSessionActive(false)}
-          profile={profile}
-          validatedAt={adminValidatedAt}
-        />
-      )}
-
-      <AdminAccessModal
-        isOpen={showAdminAccess}
-        email={profile?.email}
-        onClose={() => setShowAdminAccess(false)}
-        onVerified={() => {
-          setAdminSessionActive(true);
-          setAdminValidatedAt(new Date());
-          setShowAdminAccess(false);
-        }}
-      />
     </div>
   );
 }

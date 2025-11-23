@@ -14,7 +14,16 @@ export type AgentStatus = 'active' | 'inactive' | 'deploying' | 'error';
 export type TransactionType = 'purchase' | 'usage' | 'refund';
 export type NotificationType = 'credit_low' | 'agent_inactive' | 'system';
 
-export type RoleType = 'admin' | 'manager' | 'analyst' | 'user' | 'viewer';
+export type RoleType =
+  | 'admin'
+  | 'manager'
+  | 'analyst'
+  | 'user'
+  | 'viewer'
+  | 'superadmin'
+  | 'soporte'
+  | 'finanzas'
+  | 'moderador';
 
 export interface Profile {
   id: string;
@@ -78,6 +87,29 @@ export interface Notification {
   message: string;
   read: boolean;
   created_at: string;
+}
+
+export interface AuditLog {
+  id: string;
+  action: string;
+  actor: string;
+  role?: RoleType;
+  entity: string;
+  severity?: 'info' | 'warning' | 'critical';
+  created_at: string;
+  metadata?: Record<string, any>;
+}
+
+export interface StripePayment {
+  id: string;
+  customer_email: string;
+  amount: number;
+  currency?: string;
+  status: string;
+  description?: string;
+  invoice_id?: string;
+  created_at: string;
+  metadata?: Record<string, any>;
 }
 
 export const PLAN_LIMITS = {

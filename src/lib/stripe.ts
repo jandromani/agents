@@ -1,11 +1,15 @@
 import { loadStripe, Stripe } from '@stripe/stripe-js';
 import { supabase } from './supabase';
 
+const env = typeof import.meta !== 'undefined'
+  ? import.meta.env
+  : (globalThis as any).importMeta?.env ?? {};
+
 let stripePromise: Promise<Stripe | null>;
 
 export const getStripe = () => {
   if (!stripePromise) {
-    const publishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
+    const publishableKey = env.VITE_STRIPE_PUBLISHABLE_KEY;
     if (!publishableKey) {
       console.warn('Stripe publishable key not configured');
       return Promise.resolve(null);
@@ -145,7 +149,7 @@ export async function createCheckoutSession(
     }
 
     const response = await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout`,
+      `${env.VITE_SUPABASE_URL}/functions/v1/create-checkout`,
       {
         method: 'POST',
         headers: {
@@ -188,7 +192,7 @@ export async function createCreditPurchaseIntent(
     }
 
     const response = await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-payment-intent`,
+      `${env.VITE_SUPABASE_URL}/functions/v1/create-payment-intent`,
       {
         method: 'POST',
         headers: {
@@ -284,7 +288,7 @@ export async function cancelSubscription(): Promise<{
     }
 
     const response = await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/cancel-subscription`,
+      `${env.VITE_SUPABASE_URL}/functions/v1/cancel-subscription`,
       {
         method: 'POST',
         headers: {

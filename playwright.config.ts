@@ -1,6 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const baseURL = process.env.E2E_BASE_URL ?? process.env.SMOKE_BASE_URL;
+const supabaseUrl = process.env.E2E_SUPABASE_URL;
+const stripeSandboxKey = process.env.STRIPE_SANDBOX_KEY;
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -14,6 +16,10 @@ export default defineConfig({
     trace: 'retain-on-failure',
     video: 'retain-on-failure',
     screenshot: 'only-on-failure',
+    extraHTTPHeaders: {
+      'x-supabase-url': supabaseUrl || '',
+      'x-stripe-sandbox-key': stripeSandboxKey || '',
+    },
   },
   projects: [
     {

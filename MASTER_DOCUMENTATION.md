@@ -40,10 +40,16 @@ Alcance: Consolida guías de inicio, despliegue, Cloudflare, emails, RAG, observ
 - **Ops - Monitoreo**: [Operaciones y runbooks](#8-operaciones-monitoreo-y-runbooks)
 
 ## 3. Preparación y prerequisitos
-- Node.js 18+ instalado localmente.  
-- Cuentas: Supabase, Stripe (modo test), OpenRouter, Cloudflare (para despliegue real), SendGrid o Amazon SES, dominio opcional.  
-- Acceso a GitHub (CI/CD y hosting en Vercel/Netlify/Cloudflare Pages).  
+- Node.js 18+ instalado localmente.
+- Cuentas: Supabase, Stripe (modo test), OpenRouter, Cloudflare (para despliegue real), SendGrid o Amazon SES, dominio opcional.
+- Acceso a GitHub (CI/CD y hosting en Vercel/Netlify/Cloudflare Pages).
 - Tiempo estimado de setup inicial completo: 4-6 horas.
+
+### 3.1 Mapa completo de variables de entorno
+- Copia `.env.example` y rellena valores reales antes de arrancar o desplegar; el mismo set aplica a `.env.staging.example`.
+- **Frontend (Vite)**: `VITE_APP_ENV`, `VITE_APP_NAME`, `VITE_APP_URL`, `VITE_RELEASE`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_STRIPE_PUBLISHABLE_KEY`, `VITE_TURNSTILE_SITE_KEY`, `VITE_SENDGRID_KEY`, `VITE_TWILIO_AUTH_TOKEN`, `VITE_SENTRY_DSN`, `VITE_SENTRY_CDN`, `VITE_SENTRY_MONITOR_SLUG`, `VITE_SENTRY_TRACES_SAMPLE_RATE`, `VITE_SENTRY_PROFILES_SAMPLE_RATE`, `VITE_SENTRY_ERROR_SAMPLE_RATE`, `VITE_SENTRY_REPLAYS_SAMPLE_RATE`, `VITE_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE`, `VITE_APDEX_THRESHOLD`.
+- **Edge Functions / Backend**: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_BASIC`, `STRIPE_PRICE_ULTRA`, `OPENAI_API_KEY`, `SENDGRID_API_KEY`, `FROM_EMAIL`, `TURNSTILE_SECRET_KEY`, `TOTP_ENCRYPTION_KEY`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `SENTRY_DSN`, `SENTRY_TRACES_SAMPLE_RATE`, `SENTRY_PROFILES_SAMPLE_RATE`, `SENTRY_ERROR_SAMPLE_RATE`, `SENTRY_DEBUG`, `ENVIRONMENT`, `RELEASE`, `PROM_PUSHGATEWAY_URL`, `HOSTNAME`.
+- **Lint de entorno**: ejecuta `ENV_FILE=.env npm run lint:env` para validar que todas las claves están definidas antes de despliegues o e2e.
 
 ## 4. Puesta en marcha local
 1. Clonar e instalar dependencias:
@@ -77,7 +83,7 @@ Alcance: Consolida guías de inicio, despliegue, Cloudflare, emails, RAG, observ
   VITE_SUPABASE_ANON_KEY=<anon>
   STRIPE_SECRET_KEY=sk_test...
   STRIPE_WEBHOOK_SECRET=whsec...
-  OPENROUTER_API_KEY=sk-or...
+  OPENAI_API_KEY=sk-or-or-sk-openai...
   ```
 
 ### 5.2 Stripe
@@ -98,9 +104,9 @@ Alcance: Consolida guías de inicio, despliegue, Cloudflare, emails, RAG, observ
    VITE_STRIPE_PUBLISHABLE_KEY=pk_test...
    ```
 
-### 5.3 OpenRouter
-- Crear API key en [openrouter.ai](https://openrouter.ai) (ej. `sk-or-...`).  
-- Añadir como secret `OPENROUTER_API_KEY` en Supabase.  
+### 5.3 OpenRouter / OpenAI
+- Crear API key en [openrouter.ai](https://openrouter.ai) u OpenAI (ej. `sk-or-...` o `sk-...`).
+- Añadir como secret `OPENAI_API_KEY` en Supabase (el runtime usa esta clave para embeddings y completions).
 - Requerido para pruebas reales de agentes y RAG.
 
 ### 5.4 Cloudflare Workers
@@ -237,7 +243,7 @@ Alcance: Consolida guías de inicio, despliegue, Cloudflare, emails, RAG, observ
   - "Stripe not configured" → revisar secrets `STRIPE_*` en Supabase y `VITE_STRIPE_PUBLISHABLE_KEY` en entorno.
   - "Agent not deploying" → sin credenciales Cloudflare se usa modo simulación; si hay credenciales, revisar logs de `deploy-agent`.
   - "Notifications not showing" → revisar tabla `notifications` y webhooks de Stripe; esperar auto-refresh o click en campana.
-  - "AI service unavailable" → validar `OPENROUTER_API_KEY` y créditos disponibles.
+- "AI service unavailable" → validar `OPENAI_API_KEY` y créditos disponibles.
 
 ## 9. Checklists y anexos rápidos
 - **Seguridad antes de producción**: HTTPS activo, CSP configurado, rate limiting probado, RLS validado, secrets fuera de código, políticas de contraseña, audit logs, Términos/Privacidad/Cookies/GDPR.
@@ -246,7 +252,7 @@ Alcance: Consolida guías de inicio, despliegue, Cloudflare, emails, RAG, observ
 - **Cron y colas**: `process-email-queue` cada 5m; monitorear `email_queue` y `edge_queue_depth`.
 - **Variables esenciales (resumen)**:
   - Front (`.env`/hosting): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_STRIPE_PUBLISHABLE_KEY`, `VITE_SENTRY_*`.
-  - Functions/Secrets: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_BASIC`, `STRIPE_PRICE_ULTRA`, `OPENROUTER_API_KEY`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `SENDGRID_API_KEY` o credenciales SES, `FROM_EMAIL`.
+  - Functions/Secrets: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_BASIC`, `STRIPE_PRICE_ULTRA`, `OPENAI_API_KEY`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `SENDGRID_API_KEY` o credenciales SES, `FROM_EMAIL`.
 
 ---
 Este manual unifica las guías de inicio rápido, despliegue, Cloudflare, emails, RAG y observabilidad para servir como referencia única para equipos de desarrollo y operaciones.

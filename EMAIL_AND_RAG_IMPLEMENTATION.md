@@ -600,31 +600,26 @@ function getCachedEmbedding(query: string) {
 - ✅ MD (Markdown)
 - ✅ CSV (como texto)
 
+#### Nuevos adaptadores
+- ✅ PDF (con `pdf-parse`)
+- ✅ DOCX (con `mammoth`)
+
 #### Por Implementar
-- ⚠️ PDF (requiere pdf-parse)
-- ⚠️ DOCX (requiere mammoth)
 - ⚠️ HTML (requiere parsing)
 
-**Para PDF/DOCX**:
-```typescript
-// Añadir a process-document function
-import { pdfToText } from 'npm:pdf-parse';
-import mammoth from 'npm:mammoth';
+**Flujo de parsing y chunking (PDF/DOCX listo)**:
 
-// PDF
-if (file.type === 'application/pdf') {
-  const buffer = await file.arrayBuffer();
-  const pdf = await pdfToText(buffer);
-  text = pdf.text;
-}
+1) **Carga**: lee el archivo en el cliente (`ArrayBuffer` → `base64`) y crea el registro en `documents` con `raw_content`, `file_type`, `content_type`, `file_size` y `user_id`.
+2) **Procesamiento** (Edge Function `process-document`):
+   - Recupera el documento y valida que pertenezca al usuario autenticado.
+   - Si el `file_type` incluye `pdf`, usa `pdf-parse` sobre el buffer base64 → texto respetando saltos de línea.
+   - Si el `file_type` es DOCX, usa `mammoth.extractRawText` → texto plano limpio.
+   - Normaliza espacios/saltos de línea y descarta contenido vacío antes de chunkear.
+3) **Chunking + Embeddings**:
+   - `chunkText(text, 1000, 200)` → inserta cada fragmento en `document_chunks` con `metadata.position` y `total_chunks`.
+   - Guarda `extracted_text`, `chunk_count` y `processing_status` en `documents`.
 
-// DOCX
-if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-  const buffer = await file.arrayBuffer();
-  const result = await mammoth.extractRawText({ buffer });
-  text = result.value;
-}
-```
+> Consejos de validación manual: probar con PDFs escaneados, contratos multi-columnas y DOCX con listas/tablas; revisar que `extracted_text` no esté vacío y que `chunk_count` coincida con el log de la función.
 
 ### 7. Estrategias de Chunking Avanzadas
 

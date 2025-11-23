@@ -37,12 +37,12 @@ export function PricingPlans() {
         throw new Error('Stripe no disponible');
       }
 
-      const { error: redirectError } = await stripe.redirectToCheckout({
+      const redirectResult = await (stripe as any).redirectToCheckout({
         sessionId,
       });
 
-      if (redirectError) {
-        throw redirectError;
+      if (redirectResult?.error) {
+        throw redirectResult.error;
       }
     } catch (err: any) {
       setError(err.message || 'Error al iniciar el proceso de pago');

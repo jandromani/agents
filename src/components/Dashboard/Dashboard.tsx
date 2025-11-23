@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase, Agent, PLAN_LIMITS } from '../../lib/supabase';
-import { Plus, Bot, TrendingUp, CreditCard, Settings, LogOut, Activity, Zap } from 'lucide-react';
+import { Plus, Bot, TrendingUp, CreditCard, Settings, LogOut, Activity, Zap, ShieldCheck } from 'lucide-react';
 import { AgentCard } from './AgentCard';
 import { CreateAgentWizard } from './CreateAgentWizard';
 import { StatsCard } from './StatsCard';
@@ -9,7 +9,8 @@ import { NotificationBell } from '../Notifications/NotificationBell';
 import { NotificationPreferences } from '../Notifications/NotificationPreferences';
 import { NotificationAdminPanel } from '../Notifications/NotificationAdminPanel';
 import { CreditPurchase } from '../Billing/CreditPurchase';
-import { logError, logInfo, traceAsyncOperation } from '../../observability';
+import { AdminDashboard } from '../Admin/AdminDashboard';
+import { AdminAccessModal } from '../Admin/AdminAccessModal';
 
 export function Dashboard() {
   const { profile, signOut } = useAuth();
@@ -17,6 +18,9 @@ export function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [showCreateWizard, setShowCreateWizard] = useState(false);
   const [showCreditPurchase, setShowCreditPurchase] = useState(false);
+  const [showAdminAccess, setShowAdminAccess] = useState(false);
+  const [adminSessionActive, setAdminSessionActive] = useState(false);
+  const [adminValidatedAt, setAdminValidatedAt] = useState<Date | null>(null);
   const [stats, setStats] = useState({
     totalQueries: 0,
     activeAgents: 0,
@@ -33,7 +37,7 @@ export function Dashboard() {
   const loadAgents = async () => traceAsyncOperation('dashboard.loadAgents', async () => {
     if (!profile) return;
 
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('agents')
       .select('*')
       .eq('user_id', profile.id)
@@ -118,6 +122,12 @@ export function Dashboard() {
     return badges[profile?.plan_type || 'free'];
   };
 
+  const isAdminProfile = Boolean(
+    profile?.role === 'admin' ||
+    profile?.permissions?.includes('admin') ||
+    profile?.email?.toLowerCase().includes('admin')
+  );
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -165,6 +175,16 @@ export function Dashboard() {
               <button className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
                 <Settings className="w-5 h-5 text-slate-600" />
               </button>
+
+              {isAdminProfile && (
+                <button
+                  onClick={() => setShowAdminAccess(true)}
+                  className="flex items-center space-x-2 px-4 py-2 rounded-lg border border-cyan-200 text-cyan-700 font-semibold hover:bg-cyan-50 transition-colors"
+                >
+                  <ShieldCheck className="w-5 h-5" />
+                  <span>Panel admin</span>
+                </button>
+              )}
 
               <button
                 onClick={signOut}
@@ -274,6 +294,25 @@ export function Dashboard() {
         onSuccess={() => {
           loadStats();
           window.location.reload();
+        }}
+      />
+
+      {adminSessionActive && (
+        <AdminDashboard
+          onClose={() => setAdminSessionActive(false)}
+          profile={profile}
+          validatedAt={adminValidatedAt}
+        />
+      )}
+
+      <AdminAccessModal
+        isOpen={showAdminAccess}
+        email={profile?.email}
+        onClose={() => setShowAdminAccess(false)}
+        onVerified={() => {
+          setAdminSessionActive(true);
+          setAdminValidatedAt(new Date());
+          setShowAdminAccess(false);
         }}
       />
     </div>

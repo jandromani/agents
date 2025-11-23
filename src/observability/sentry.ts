@@ -65,7 +65,18 @@ export function initObservability() {
 
   const dsn = import.meta.env.VITE_SENTRY_DSN;
   if (!dsn) {
-    console.info('[Observability] Sentry DSN no configurado, telemetría deshabilitada');
+    console.error('[Observabilidad] Sentry DSN ausente: la telemetría principal queda deshabilitada');
+
+    if (typeof performance !== 'undefined' && typeof performance.mark === 'function') {
+      performance.mark('observability:sentry:dsn_missing');
+    }
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('observability:sentry:disabled', {
+        detail: { reason: 'missing-dsn' },
+      }));
+    }
+
     return;
   }
 

@@ -14,7 +14,7 @@
     "test:e2e:performance": "playwright test tests/e2e/performance.spec.ts",
     "test:performance": "vitest run tests/performance",
     "test:smoke": "playwright test --grep @smoke",
-    "test:ci": "npm run lint && npm run typecheck && npm run test:unit && npm run test:e2e",
+    "test:ci": "npm run lint && npm run typecheck && npm run test:unit && npm run test:smoke && npm run test:e2e",
     "audit": "npm audit --omit=dev --audit-level=moderate"
   },
   "dependencies": {

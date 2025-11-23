@@ -1,4 +1,7 @@
+import { Buffer } from 'node:buffer';
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
+import mammoth from 'npm:mammoth';
+import pdfParse from 'npm:pdf-parse';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,8 +11,10 @@ const corsHeaders = {
 
 interface ProcessDocumentRequest {
   documentId: string;
-  content: string;
+  content?: string;
   agentId?: string;
+  fileType?: string;
+  base64Content?: string;
 }
 
 Deno.serve(async (req: Request) => {
@@ -43,10 +48,35 @@ Deno.serve(async (req: Request) => {
       throw new Error('Unauthorized');
     }
 
-    const { documentId, content, agentId }: ProcessDocumentRequest = await req.json();
+    const { documentId, content, agentId, fileType, base64Content }: ProcessDocumentRequest = await req.json();
 
-    if (!documentId || !content) {
+    if (!documentId) {
       throw new Error('Missing required fields');
+    }
+
+    const { data: documentRecord, error: documentError } = await supabase
+      .from('documents')
+      .select('id, user_id, file_type, content_type, raw_content')
+      .eq('id', documentId)
+      .single();
+
+    if (documentError || !documentRecord) {
+      throw new Error('Document not found');
+    }
+
+    if (documentRecord.user_id !== user.id) {
+      throw new Error('Unauthorized document access');
+    }
+
+    const extractedText = await extractTextContent({
+      providedText: content,
+      base64Payload: base64Content,
+      storedRawContent: documentRecord.raw_content,
+      fileType: fileType || documentRecord.content_type || documentRecord.file_type,
+    });
+
+    if (!extractedText || extractedText.length < 10) {
+      throw new Error('No extractable text found in document');
     }
 
     await supabase
@@ -55,7 +85,7 @@ Deno.serve(async (req: Request) => {
       .eq('id', documentId);
 
     console.log('Chunking document...');
-    const chunks = chunkText(content, 1000, 200);
+    const chunks = chunkText(extractedText, 1000, 200);
     console.log(`Created ${chunks.length} chunks`);
 
     let processedChunks = 0;
@@ -123,7 +153,7 @@ Deno.serve(async (req: Request) => {
       .update({
         processing_status: 'completed',
         processed_at: new Date().toISOString(),
-        extracted_text: content,
+        extracted_text: extractedText,
         chunk_count: processedChunks,
       })
       .eq('id', documentId);
@@ -160,6 +190,94 @@ Deno.serve(async (req: Request) => {
     );
   }
 });
+
+interface ExtractTextParams {
+  providedText?: string;
+  base64Payload?: string;
+  storedRawContent?: string | null;
+  fileType?: string | null;
+}
+
+async function extractTextContent({
+  providedText,
+  base64Payload,
+  storedRawContent,
+  fileType,
+}: ExtractTextParams): Promise<string> {
+  const normalizedType = fileType?.toLowerCase() || '';
+  const binaryPayload =
+    decodeBase64Payload(base64Payload) ||
+    decodeBase64Payload(storedRawContent) ||
+    decodeBase64Payload(providedText);
+
+  if (isPdfType(normalizedType) && binaryPayload) {
+    const pdfResult = await pdfParse(Buffer.from(binaryPayload));
+    return normalizeText(pdfResult.text || '');
+  }
+
+  if (isDocxType(normalizedType) && binaryPayload) {
+    const docxResult = await mammoth.extractRawText({ buffer: Buffer.from(binaryPayload) });
+    return normalizeText(docxResult.value || '');
+  }
+
+  const fallbackText = providedText ?? storedRawContent ?? '';
+  return normalizeText(fallbackText);
+}
+
+function isPdfType(fileType?: string | null): boolean {
+  if (!fileType) return false;
+  return fileType.includes('pdf');
+}
+
+function isDocxType(fileType?: string | null): boolean {
+  if (!fileType) return false;
+  return (
+    fileType.includes('application/vnd.openxmlformats-officedocument.wordprocessingml.document') ||
+    fileType.endsWith('.docx') ||
+    fileType.includes('docx')
+  );
+}
+
+function decodeBase64Payload(raw?: string | null): Uint8Array | null {
+  if (!raw) return null;
+
+  const sanitized = raw.replace(/\s+/g, '');
+
+  if (!isProbablyBase64(sanitized)) {
+    return null;
+  }
+
+  try {
+    return Buffer.from(sanitized, 'base64');
+  } catch {
+    return null;
+  }
+}
+
+function isProbablyBase64(value: string): boolean {
+  if (!value || value.length < 16) return false;
+  if (value.length % 4 !== 0) return false;
+  return /^[A-Za-z0-9+/]+={0,2}$/.test(value);
+}
+
+function normalizeText(text: string): string {
+  if (!text) return '';
+
+  const cleanedLines = text
+    .replace(/\r\n/g, '\n')
+    .split('\n')
+    .map(line => line.replace(/\s+/g, ' ').trim());
+
+  const compacted = cleanedLines.reduce<string[]>((acc, line) => {
+    if (line === '' && acc[acc.length - 1] === '') {
+      return acc;
+    }
+    acc.push(line);
+    return acc;
+  }, []);
+
+  return compacted.join('\n').trim();
+}
 
 function chunkText(
   text: string,

@@ -55,7 +55,31 @@ VITE_SUPABASE_URL=https://tu-proyecto.supabase.co
 VITE_SUPABASE_ANON_KEY=tu_anon_key_aqui
 ```
 
-### 2.3 Aplicar Migraciones
+### 2.3 Checklist de Variables de Entorno
+
+Antes de desplegar funciones o frontend, revisa que cada variable tenga un valor real (test o producción según corresponda):
+
+**Frontend (`VITE_`, visibles en el bundle):**
+- `VITE_APP_ENV`, `VITE_APP_URL`, `VITE_RELEASE`
+- `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
+- `VITE_STRIPE_PUBLISHABLE_KEY`
+- `VITE_SENTRY_DSN`, `VITE_SENTRY_CDN`, `VITE_SENTRY_TRACES_SAMPLE_RATE`, `VITE_SENTRY_PROFILES_SAMPLE_RATE`, `VITE_SENTRY_ERROR_SAMPLE_RATE`, `VITE_SENTRY_REPLAYS_SAMPLE_RATE`, `VITE_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE`
+- `VITE_TURNSTILE_SITE_KEY`
+- `VITE_SENDGRID_KEY`, `VITE_TWILIO_AUTH_TOKEN`
+
+**Backend / Edge Functions (configurar en Supabase → Edge Functions → Secrets):**
+- Núcleo Supabase: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`
+- Stripe: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_BASIC`, `STRIPE_PRICE_ULTRA`
+- OpenAI: `OPENAI_API_KEY`
+- Cloudflare (deploy-agent): `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`
+- Captcha: `TURNSTILE_SECRET_KEY`
+- MFA: `TOTP_ENCRYPTION_KEY`
+- Emails: `SENDGRID_API_KEY`, `FROM_EMAIL`
+- Observabilidad en edge: `SENTRY_DSN`, `SENTRY_TRACES_SAMPLE_RATE`, `SENTRY_PROFILES_SAMPLE_RATE`, `SENTRY_ERROR_SAMPLE_RATE`, `SENTRY_DEBUG`, `RELEASE`, `MODE`, `PROM_PUSHGATEWAY_URL`
+
+💡 Recomendación: usa valores de producción en staging para detectar diferencias y evita exponer claves secretas sin el prefijo `VITE_`.
+
+### 2.4 Aplicar Migraciones
 
 Ve a SQL Editor en Supabase Dashboard y ejecuta **en orden**:
 
@@ -69,7 +93,7 @@ O desde CLI:
 npx supabase db push
 ```
 
-### 2.4 Configurar Edge Functions
+### 2.5 Configurar Edge Functions
 
 Desde tu proyecto local:
 

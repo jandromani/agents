@@ -1,4 +1,4 @@
-import { appName, buildMonitorSlug, defaultTags, environment, parseSampleRate, release, sampleRates } from './config';
+import { appName, buildMonitorSlug, defaultTags, environment, parseSampleRate, release, sampleRates, sentryDsn } from './config';
 import type { SeverityLevel } from './types';
 
 declare global {
@@ -69,7 +69,7 @@ export function initObservability() {
     return;
   }
 
-  const dsn = import.meta.env.VITE_SENTRY_DSN;
+  const dsn = sentryDsn;
   if (!dsn) {
     console.error('[Observabilidad] Sentry DSN ausente: la telemetría principal queda deshabilitada');
 

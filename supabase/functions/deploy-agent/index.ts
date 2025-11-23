@@ -157,6 +157,10 @@ ${documentsContext}
 // Agent ID: ${agent.id}
 // User Plan: ${profile.plan_type}
 
+import * as Sentry from 'https://esm.sh/@sentry/cloudflare@8.30.0';
+
+const FEATURE = 'agent-runtime';
+
 const AGENT_CONFIG = {
   id: '${agent.id}',
   name: '${agent.name.replace(/'/g, "\\'")  }',
@@ -168,8 +172,57 @@ const AGENT_CONFIG = {
 const SUPABASE_URL = '${Deno.env.get('SUPABASE_URL')}';
 const TRACKING_ENDPOINT = SUPABASE_URL + '/functions/v1/track-usage';
 
+let sentryInitialized = false;
+
+const parseSampleRate = (value, fallback) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const initSentry = (env) => {
+  if (sentryInitialized) return;
+  const dsn = env.CLOUDFLARE_SENTRY_DSN || env.SENTRY_DSN;
+  if (!dsn) return;
+
+  Sentry.init({
+    dsn,
+    environment: env.ENVIRONMENT || env.NODE_ENV || 'production',
+    release: env.RELEASE,
+    tracesSampleRate: parseSampleRate(env.SENTRY_TRACES_SAMPLE_RATE, 0.1),
+    sampleRate: parseSampleRate(env.SENTRY_ERROR_SAMPLE_RATE, 0.4),
+  });
+
+  sentryInitialized = true;
+};
+
+const pushGatewayPath = (env, jobName) => {
+  if (!env.PROM_PUSHGATEWAY_URL) return undefined;
+  const instance = env.WORKER_INSTANCE || env.WORKER_NAME || 'cf-agent';
+  return env.PROM_PUSHGATEWAY_URL + '/metrics/job/' + jobName + '/instance/' + instance;
+};
+
+const recordMetrics = async (env, metric) => {
+  const pushUrl = pushGatewayPath(env, FEATURE);
+  const labels = 'feature="' + FEATURE + '",agent_id="' + AGENT_CONFIG.id + '"';
+  const payload = [
+    'edge_function_requests{' + labels + ',status="' + metric.status + '"} 1',
+    'edge_function_latency_ms{' + labels + ',status="' + metric.status + '"} ' + metric.latencyMs.toFixed(2),
+  ].join('\n');
+
+  if (pushUrl) {
+    await fetch(pushUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: payload,
+    });
+  } else {
+    console.log('[metrics]', payload);
+  }
+};
+
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
+    initSentry(env);
     const corsHeaders = {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -186,12 +239,14 @@ export default {
     if (request.method !== 'POST') {
       return new Response(
         JSON.stringify({ error: 'Method not allowed' }),
-        { 
-          status: 405, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        {
+          status: 405,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       );
     }
+
+    const start = Date.now();
 
     try {
       const { query, userId } = await request.json();
@@ -257,6 +312,9 @@ You must answer questions based on this knowledge. If you don't know something, 
         console.error('Tracking error:', trackError);
       }
 
+      const latencyMs = Date.now() - start;
+      ctx?.waitUntil(recordMetrics(env, { status: 200, latencyMs }));
+
       return new Response(
         JSON.stringify({
           success: true,
@@ -274,6 +332,17 @@ You must answer questions based on this knowledge. If you don't know something, 
       );
     } catch (error) {
       console.error('Agent error:', error);
+
+      if (sentryInitialized) {
+        Sentry.captureException(error, scope => {
+          scope.setTag('feature', FEATURE);
+          scope.setTag('agent_id', AGENT_CONFIG.id);
+          return scope;
+        });
+      }
+
+      const latencyMs = Date.now() - start;
+      ctx?.waitUntil(recordMetrics(env, { status: 500, latencyMs }));
       return new Response(
         JSON.stringify({
           success: false,

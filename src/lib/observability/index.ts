@@ -24,13 +24,12 @@ export async function initObservability(config: ObservabilityConfig) {
 
   try {
     const Sentry = await import('@sentry/react');
-    // Replay import is optional; ignore failures to keep app responsive
     try {
-      const Replay = await import('@sentry/replay');
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-      options.integrations = [new (Replay.default as any)()];
-    } catch (err) {
-      console.warn('Sentry Replay not enabled', err);
+      if ((Sentry as any).replayIntegration) {
+        options.integrations = [(Sentry as any).replayIntegration()];
+      }
+    } catch {
+      // Replay not available, continue without it
     }
 
     Sentry.init(options);

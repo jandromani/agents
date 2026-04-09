@@ -12,7 +12,3 @@ declare module '@sentry/react' {
   export function captureException(error: unknown, context?: { extra?: Record<string, unknown> }): void;
 }
 
-declare module '@sentry/replay' {
-  const Replay: unknown;
-  export default Replay;
-}

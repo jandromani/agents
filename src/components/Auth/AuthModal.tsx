@@ -24,6 +24,8 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
   const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
   const [mfaChallenge, setMfaChallenge] = useState<MfaChallengeState | null>(null);
   const [totpCode, setTotpCode] = useState('');
+  const [useBackupCode, setUseBackupCode] = useState(false);
+  const [backupCodeInput, setBackupCodeInput] = useState('');
   const { signIn, signUp, verifyMfaChallenge } = useAuth();
 
   if (!isOpen) return null;
@@ -50,6 +52,33 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
       }
 
       if (mode === 'signin' && mfaChallenge) {
+        if (useBackupCode) {
+          if (backupCodeInput.length < 8) {
+            throw new Error('Introduce el código de respaldo completo');
+          }
+          const response = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-2fa`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token || ''}`,
+              },
+              body: JSON.stringify({ action: 'verify-backup', backupCode: backupCodeInput }),
+            }
+          );
+          const result = await response.json();
+          if (!result.success) throw new Error(result.error || 'Código de respaldo inválido');
+          if (result.message) setSuccess(result.message);
+          await logSecurityEvent('login_backup_code_used', mfaChallenge.email, { email }, 'medium');
+          setMfaChallenge(null);
+          setBackupCodeInput('');
+          setUseBackupCode(false);
+          rateLimiter.reset(`signin_${email}`);
+          onClose();
+          return;
+        }
+
         if (totpCode.length < 6) {
           throw new Error('Introduce el código de 6 dígitos para continuar');
         }
@@ -196,26 +225,62 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
             </div>
 
             {mode === 'signin' && mfaChallenge && (
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Código 2FA
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]{6}"
-                    value={totpCode}
-                    onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ''))}
-                    required
-                    minLength={6}
-                    maxLength={6}
-                    className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition-all"
-                    placeholder="123456"
-                  />
-                </div>
-                <p className="text-xs text-slate-500 mt-2">Usa tu app autenticadora o un código de respaldo.</p>
+              <div className="space-y-3">
+                {!useBackupCode ? (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Código 2FA
+                    </label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]{6}"
+                        value={totpCode}
+                        onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ''))}
+                        required
+                        minLength={6}
+                        maxLength={6}
+                        className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition-all"
+                        placeholder="123456"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setUseBackupCode(true); setTotpCode(''); setError(''); }}
+                      className="mt-2 text-xs text-cyan-600 hover:text-cyan-700 underline"
+                    >
+                      ¿No tienes acceso al autenticador? Usa un código de respaldo
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Código de Respaldo
+                    </label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                      <input
+                        type="text"
+                        value={backupCodeInput}
+                        onChange={(e) => setBackupCodeInput(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                        required
+                        minLength={8}
+                        maxLength={10}
+                        className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition-all font-mono tracking-widest"
+                        placeholder="ABCD123456"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setUseBackupCode(false); setBackupCodeInput(''); setError(''); }}
+                      className="mt-2 text-xs text-cyan-600 hover:text-cyan-700 underline"
+                    >
+                      Volver al código del autenticador
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -303,6 +368,8 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'signin' }: AuthModal
                 setSuccess('');
                 setMfaChallenge(null);
                 setTotpCode('');
+                setUseBackupCode(false);
+                setBackupCodeInput('');
               }}
               className="text-cyan-600 hover:text-cyan-700 font-medium"
             >

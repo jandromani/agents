@@ -156,6 +156,16 @@ export const sendToSentry = (handler: (client: any) => void) => {
   });
 };
 
+export const setUserContext = (user: { id: string; email?: string; plan?: string } | null) => {
+  sendToSentry(client => {
+    if (user) {
+      client.setUser({ id: user.id, email: user.email, plan: user.plan });
+    } else {
+      client.setUser(null);
+    }
+  });
+};
+
 export const captureWithLevel = (level: SeverityLevel, message: string, context?: Record<string, unknown>) => {
   sendToSentry(client => {
     client.addBreadcrumb({ level, message, data: context });

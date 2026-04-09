@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabase, Profile } from '../lib/supabase';
-import { logError, logInfo, traceAsyncOperation } from '../observability';
+import { logError, logInfo, traceAsyncOperation, setUserContext } from '../observability';
 import { createAuditLog } from '../lib/security';
 
 export interface MfaChallengeState {
@@ -44,6 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (data) {
       setProfile(data);
+      setUserContext({ id: userId, email: data.email, plan: data.plan_type });
       logInfo('Perfil cargado correctamente', { userId, plan: data.plan_type });
     }
     return data;
@@ -189,6 +190,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => traceAsyncOperation('auth.signOut', async () => {
     await supabase.auth.signOut();
     setProfile(null);
+    setUserContext(null);
     if (user?.id) {
       await createAuditLog('logout', user.id, 'auth', user.id);
     }

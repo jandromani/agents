@@ -1,29 +1,30 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const fetchMock = vi.fn();
-
 vi.stubGlobal('fetch', fetchMock as any);
+
 vi.mock('@stripe/stripe-js', () => ({
   loadStripe: vi.fn(async () => ({ id: 'stripe-instance' })),
+}));
+
+const mockGetSession = vi.fn();
+const mockFrom = vi.fn();
+
+vi.mock('../../../src/lib/supabase', () => ({
+  supabase: {
+    auth: { getSession: mockGetSession },
+    from: mockFrom,
+  },
 }));
 
 describe('stripe client helpers', () => {
   beforeEach(() => {
     vi.resetModules();
     fetchMock.mockReset();
+    mockGetSession.mockReset();
+    mockFrom.mockReset();
     (globalThis as any).importMeta = { env: {} };
   });
-
-  const mockSupabase = {
-    auth: {
-      getSession: vi.fn(),
-    },
-    from: vi.fn(),
-  };
-
-  vi.mock('../../../src/lib/supabase', () => ({
-    supabase: mockSupabase,
-  }));
 
   it('formats money and dates consistently', async () => {
     (globalThis as any).importMeta = { env: { VITE_STRIPE_PUBLISHABLE_KEY: 'pk_test' } };
@@ -40,7 +41,7 @@ describe('stripe client helpers', () => {
         VITE_STRIPE_PUBLISHABLE_KEY: 'pk_test',
       },
     };
-    mockSupabase.auth.getSession.mockResolvedValue({ data: { session: null } });
+    mockGetSession.mockResolvedValue({ data: { session: null } });
     const stripeLib = await import('../../../src/lib/stripe');
     const response = await stripeLib.createCheckoutSession('plan_basic', 'ok', 'cancel');
     expect(response.error).toBe('Not authenticated');
@@ -53,7 +54,7 @@ describe('stripe client helpers', () => {
         VITE_STRIPE_PUBLISHABLE_KEY: 'pk_test',
       },
     };
-    mockSupabase.auth.getSession.mockResolvedValue({
+    mockGetSession.mockResolvedValue({
       data: { session: { access_token: 'token', user: { id: 'user-123' } } },
     });
     fetchMock.mockResolvedValue({
